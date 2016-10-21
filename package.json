@@ -1,0 +1,20 @@
+{
+  "name": "three-map-controls",
+  "version": "0.9.0",
+  
+  "repository": { 
+    "type" : "git", 
+    "url" : "https://github.com/sikanrong/three-map-controls.git"
+  },
+  
+  "author": {
+    name: "Alex Pilafian",
+    email: "sikanrong@gmail.com",
+    url: "http://github.com/sikanrong"
+  }
+  
+  "dependencies": {
+    "three": "0.81.2",
+    "lodash": "4.16.4"
+  }
+}
