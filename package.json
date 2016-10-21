@@ -8,10 +8,10 @@
   },
   
   "author": {
-    name: "Alex Pilafian",
-    email: "sikanrong@gmail.com",
-    url: "http://github.com/sikanrong"
-  }
+    "name": "Alex Pilafian",
+    "email": "sikanrong@gmail.com",
+    "url": "http://github.com/sikanrong"
+  },
   
   "dependencies": {
     "three": "0.81.2",
