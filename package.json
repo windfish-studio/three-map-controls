@@ -14,5 +14,10 @@
   "dependencies": {
     "three": "0.81.2",
     "lodash": "4.16.4"
+  },
+
+  "devDependencies": {
+    "gulp": "3.9.1",
+    "gulp-live-server": "0.0.30"
   }
 }

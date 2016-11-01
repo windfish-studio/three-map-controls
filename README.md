@@ -1,6 +1,8 @@
 # three-map-controls
 Map controls class for threeJS (pan and zoom with respect to a THREE.Plane)
 
+Works with mobile device touch events.
+
 ##usage
 
 ```javascript
@@ -35,9 +37,6 @@ this.enableZoom = true;
 this.zoomSpeed = 3.0;
 this.zoomDampingAlpha = 0.1;
 
-// Callback that will fire when the zoom changes.
-this.onZoom = function(){};
-
 // Set to false to disable panning
 this.enablePan = true;
 this.keyPanSpeed = 12.0;	// pixels moved per arrow key push
@@ -51,5 +50,16 @@ this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
 
 // Mouse buttons
 this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
+
+```
+
+##public functions
+```javascript
+
+//returns current zoom (value between 0 and 1)
+this.getZoomAlpha();
+
+//needs to be called on each animation frame.
+this.update();
 
 ```
