@@ -13,7 +13,7 @@ new THREE.MapControls( camera, renderer.domElement, {
 });
 ```
 
-Here's a [jsfiddle demo]: https://jsfiddle.net/sikanrong/m8c250o2/1/
+Here's a [jsfiddle demo]: https://jsfiddle.net/sikanrong/m8c250o2/
 
 
 ##options
