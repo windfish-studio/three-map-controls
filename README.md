@@ -28,8 +28,8 @@ this.enabled = true;
 this.target;
 
 // How far you can dolly in and out
-this.minDistance = 0;
-this.maxDistance = Infinity;
+this.minDistance = 1; //probably should never be 0
+this.maxDistance = 100;
 
 // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
 // Set to false to disable zooming
