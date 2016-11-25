@@ -56,7 +56,8 @@ this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
 ##public functions
 ```javascript
 
-//returns current zoom (value between 0 and 1)
+// returns current zoom value [range between 0 and 1];
+// O represents the camera at maxDistance from the target-plane, and 1 is the camera at minDistance.
 this.getZoomAlpha();
 
 //needs to be called on each animation frame.
