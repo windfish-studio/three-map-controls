@@ -17,6 +17,8 @@
   },
   "devDependencies": {
     "gulp": "3.9.1",
-    "gulp-live-server": "0.0.30"
+    "gulp-live-server": "0.0.30",
+    "tape": "^4.5.1",
+    "dom-stub": "1.0.1"
   }
 }
