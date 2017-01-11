@@ -64,3 +64,43 @@ this.getZoomAlpha();
 this.update();
 
 ```
+
+##TAP-compatible tests
+```
+$ node test/test.js
+
+TAP version 13
+# shouldn't allow initialization if camera intersects plane
+ok 1 camera cannot intersect target plane on init
+ok 2 controls created correctly
+# should initialize with cam at controls.maxDistance by default
+ok 3 should be equal
+ok 4 should be equal
+# shouldn't move from initial position if no input received
+ok 5 should be equal
+ok 6 should be truthy
+# should automatically orient camera towards plane based on starting position
+ok 7 should be truthy
+# should lerp camera towards target plane on mousewheel
+ok 8 should be equal
+# should stop zooming at minDistance from target plane
+ok 9 should be equal
+ok 10 should be equal
+# reset should revert camera to correct initial position
+ok 11 should be truthy
+# should zoom into mouse pointer
+ok 12 should be truthy
+# mouse should keep same world coordinates under it during camera pan (pan calibration)
+ok 13 should be truthy
+# initialZoom parameter should set the default cam position correctly
+ok 14 should be equal
+ok 15 should be equal
+# pan calibration should hold true when zoomed in
+ok 16 should be truthy
+
+1..16
+# tests 16
+# pass  16
+
+# ok
+```
