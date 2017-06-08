@@ -5,20 +5,27 @@
     "type": "git",
     "url": "https://github.com/sikanrong/three-map-controls.git"
   },
+  "files": ["lib"],
   "main": "lib/three-map-controls.js",
   "author": {
     "name": "Alex Pilafian",
     "email": "sikanrong@gmail.com",
     "url": "http://github.com/sikanrong"
   },
+  "scripts": {
+    "build": "babel --presets babel-preset-es2015 --out-dir lib src",
+    "prepublish": "npm run build"
+  },
   "dependencies": {
     "three": "0.83.0",
     "lodash": "4.16.4"
   },
   "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-es2015": "^6.24.1",
+    "dom-stub": "1.0.1",
     "gulp": "3.9.1",
     "gulp-live-server": "0.0.30",
-    "tape": "^4.5.1",
-    "dom-stub": "1.0.1"
+    "tape": "^4.5.1"
   }
 }

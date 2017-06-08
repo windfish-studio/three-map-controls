@@ -2,15 +2,10 @@
 
 //Alex Pilafian 2016 - sikanrong@gmail.com
 
-if(typeof module == 'undefined')
-  var module = {};
+import * as THREE from 'three'
+import _ from 'lodash'
 
-if(typeof require == 'undefined')
-    var require = function(){return undefined;};
-
-module.exports = (function(THREE, _){
-
-    THREE.MapControls = function ( object, domElement, options ) {
+var MapControls = function ( object, domElement, options ) {
 
         //
         // Public Variables
@@ -75,7 +70,7 @@ module.exports = (function(THREE, _){
         var STATE = { NONE : - 1, DOLLY : 1, PAN : 2, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
 
         var state = STATE.NONE;
-        
+
         var finalTargetDistance;
         var currentTargetDistance;
 
@@ -314,7 +309,7 @@ module.exports = (function(THREE, _){
 
         function dollyIn( dollyScale ) {
 
-            if ( scope.object instanceof THREE.PerspectiveCamera ) {
+            if ( cameraOfKnownType() ) {
 
                 finalTargetDistance /= dollyScale;
 
@@ -328,7 +323,7 @@ module.exports = (function(THREE, _){
 
         function dollyOut( dollyScale ) {
 
-            if ( scope.object instanceof THREE.PerspectiveCamera ) {
+            if ( cameraOfKnownType() ) {
 
                 finalTargetDistance *= dollyScale;
 
@@ -338,6 +333,10 @@ module.exports = (function(THREE, _){
                 scope.enableZoom = false;
 
             }
+        }
+
+        function cameraOfKnownType() {
+            return scope.object.type === 'PerspectiveCamera'
         }
 
         function handleUpdateDollyTrackMouse(event){
@@ -420,10 +419,10 @@ module.exports = (function(THREE, _){
         function calculateMinZoom(cam_pos, map_intersect){
             return map_intersect.clone().add(
                 cam_pos.clone()
-                        .sub(map_intersect)
-                        .normalize()
-                        .multiplyScalar(scope.maxDistance)
-                );
+                .sub(map_intersect)
+                .normalize()
+                .multiplyScalar(scope.maxDistance)
+            );
         }
 
 
@@ -784,11 +783,9 @@ module.exports = (function(THREE, _){
 
         this.update();
 
-    };
+};
 
-    THREE.MapControls.prototype = Object.create( THREE.EventDispatcher.prototype );
-    THREE.MapControls.prototype.constructor = THREE.MapControls;
+MapControls.prototype = Object.create( THREE.EventDispatcher.prototype );
+MapControls.prototype.constructor = MapControls;
 
-    return THREE.MapControls;
-
-})(require('three') || window.THREE, require('lodash') || window._);
+export default MapControls;

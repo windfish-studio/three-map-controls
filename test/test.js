@@ -4,7 +4,7 @@ var tape = require('tape');
 var dom = require('dom-stub');
 var THREE = require('three');
 var _ = require('lodash');
-require('../lib/three-map-controls.js');
+var MapControls = require('../lib/three-map-controls.js').default;
 
 
 //Init stubs / test objects
@@ -70,7 +70,7 @@ var initial_cam_pos = new THREE.Vector3(3,2,-20); //what it should be, used for 
 
 tape("shouldn't allow initialization if camera intersects plane", function (t) {
     try{
-        controls = new THREE.MapControls( camera, el, defaultOpts );
+        controls = new MapControls( camera, el, defaultOpts );
         t.fail('controls created where camera intersects target plane');
     }catch(e){
         t.pass('camera cannot intersect target plane on init');
@@ -81,7 +81,7 @@ tape("shouldn't allow initialization if camera intersects plane", function (t) {
     camera.position.copy(_init_pos);
 
     try{
-        controls = new THREE.MapControls( camera, el, defaultOpts );
+        controls = new MapControls( camera, el, defaultOpts );
         t.pass('controls created correctly');
     }catch(e){
         t.fail('controls not created successfully');
