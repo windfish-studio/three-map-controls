@@ -1,9 +1,6 @@
 <html>
     <head>
-        <script src="node_modules/three/build/three.min.js"></script>
-        <script src="node_modules/lodash/lodash.js"></script>
-      
-        <script src="lib/three-map-controls.js"></script>  
+        <script src="dist/three-map-controls.js"></script>
       
         <style>
           body{
@@ -14,6 +11,10 @@
 
     <body>
       <script type="text/javascript">
+          var THREE = require('three');
+          var MapControls = require(1).default;
+          var _ = require('lodash');
+
         (function(container){
           var camera, scene, renderer;
           var meshes = [];
@@ -51,7 +52,7 @@
             
           	container.appendChild( renderer.domElement );
             
-            new THREE.MapControls( camera, renderer.domElement, {
+            new MapControls( camera, renderer.domElement, {
                 target: new THREE.Plane(new THREE.Vector3(0,0,1), 0),
                 minDistance: 2.0,
                 maxDistance: 20
