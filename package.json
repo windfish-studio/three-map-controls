@@ -1,11 +1,13 @@
 {
   "name": "three-map-controls",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "repository": {
     "type": "git",
     "url": "https://github.com/sikanrong/three-map-controls.git"
   },
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "main": "lib/three-map-controls.js",
   "author": {
     "name": "Alex Pilafian",
@@ -40,6 +42,5 @@
     "path": "0.12.7",
     "resolve-file": "0.2.1",
     "node.extend": "1.1.6"
-
   }
 }
