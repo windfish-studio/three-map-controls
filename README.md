@@ -6,7 +6,10 @@ Works with mobile device touch events.
 ##usage
 
 ```javascript
-new THREE.MapControls( camera, renderer.domElement, {
+import MapControls from 'three-map-controls'
+
+// currently, only PerspectiveCamera is supported
+new MapControls( camera, renderer.domElement, {
     target: new THREE.Plane(new THREE.Vector3(0,0,1), 0),
     minDistance: 2.0,
     maxDistance: 20
