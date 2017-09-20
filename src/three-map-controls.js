@@ -341,7 +341,7 @@ var MapControls = function ( object, domElement, options ) {
 
         function handleUpdateDollyTrackMouse(event){
             var prevMouse = mouse.clone();
-            mouse.set(( event.clientX / domElement.clientWidth ) * 2 - 1, - ( event.clientY / domElement.clientHeight ) * 2 + 1);
+            mouse.set(( event.offsetX / domElement.clientWidth ) * 2 - 1, - ( event.offsetY / domElement.clientHeight ) * 2 + 1);
 
             if(!prevMouse.equals(mouse)){
                 var rc = new THREE.Raycaster();
@@ -356,7 +356,7 @@ var MapControls = function ( object, domElement, options ) {
 
             //console.log( 'handleMouseDownDolly' );
 
-            dollyStart.set( event.clientX, event.clientY );
+            dollyStart.set( event.offsetX, event.offsetY );
 
         }
 
@@ -364,7 +364,7 @@ var MapControls = function ( object, domElement, options ) {
 
             //console.log( 'handleMouseDownPan' );
 
-            panStart.set( event.clientX, event.clientY );
+            panStart.set( event.offsetX, event.offsetY );
 
         }
 
@@ -374,7 +374,7 @@ var MapControls = function ( object, domElement, options ) {
 
             //console.log( 'handleMouseMoveDolly' );
 
-            dollyEnd.set( event.clientX, event.clientY );
+            dollyEnd.set( event.offsetX, event.offsetY );
 
             dollyDelta.subVectors( dollyEnd, dollyStart );
 
@@ -398,7 +398,7 @@ var MapControls = function ( object, domElement, options ) {
 
             //console.log( 'handleMouseMovePan' );
 
-            panEnd.set( event.clientX, event.clientY );
+            panEnd.set( event.offsetX, event.offsetY );
 
             panDelta.subVectors( panEnd, panStart );
 
