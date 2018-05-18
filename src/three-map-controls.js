@@ -197,15 +197,26 @@ class MapControls extends THREE.EventDispatcher{
             this.domElement.removeEventListener( 'keydown', this._onKeyDown, false );
         };
 
-        zoomToFit (mesh){
-            this._panTarget.copy(mesh.localToWorld(mesh.geometry.boundingSphere.center.clone()));
+        zoomToFit (mesh, center, width, height){
+            //if only width is passed interpret it as radius and set height equal to width
+            center = center || mesh.geometry.boundingSphere.center;
+            width = width || (mesh.geometry.boundingSphere.radius * 2);
+
+            if(height === undefined)
+                height = width;
+
+            this._panTarget.copy(mesh.localToWorld(center.clone()));
             this._panCurrent.copy(this._intersectCameraTarget().intersection);
 
             this._straightDollyTrack();
 
             var vFOV = this.camera.fov * (Math.PI / 180);
             var hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
-            this._finalTargetDistance = (mesh.geometry.boundingSphere.radius / Math.sin(Math.min(hFOV, vFOV) * 0.5));
+            var obj_aspect = width / height;
+
+            this._finalTargetDistance = ((((obj_aspect > this.camera.aspect)? width : height) / 2) / Math.tan(((obj_aspect > this.camera.aspect)? hFOV : vFOV) / 2));
+
+
         };
 
         _updateZoomAlpha(){
