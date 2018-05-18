@@ -5,429 +5,366 @@
 import * as THREE from 'three'
 import _ from 'lodash'
 
-var MapControls = function ( object, domElement, options ) {
+class MapControls extends THREE.EventDispatcher{
 
-        //
-        // Public Variables
-        //
+        constructor(camera, domElement, options){
+            super();
 
-        this.object = object;
+            this.camera = camera;
 
-        //Object to use for listening for keyboard/mouse events
-        this.domElement = ( domElement !== undefined ) ? domElement : document;
+            //Object to use for listening for keyboard/mouse events
+            this.domElement = ( domElement !== undefined ) ? domElement : document;
 
-        // Set to false to disable this control (Disables all input events)
-        this.enabled = true;
+            // Set to false to disable this control (Disables all input events)
+            this.enabled = true;
 
-        // Must be set to instance of THREE.Plane
-        this.target;
+            // Must be set to instance of THREE.Plane
+            this.target;
 
-        // How far you can dolly in and out
-        this.minDistance = 1; //probably should never be 0
-        this.maxDistance = 100;
+            // How far you can dolly in and out
+            this.minDistance = 1; //probably should never be 0
+            this.maxDistance = 100;
 
-        // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
-        // Set to false to disable zooming
-        this.enableZoom = true;
-        this.zoomSpeed = 6.0;
-        this.zoomDampingAlpha = 0.1;
-        this.initialZoom = 0; //start zoomed all the way out unless set in options.
+            // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
+            // Set to false to disable zooming
+            this.enableZoom = true;
+            this.zoomSpeed = 6.0;
+            this.zoomDampingAlpha = 0.1;
+            this.initialZoom = 0; //start zoomed all the way out unless set in options.
 
-        // Set to false to disable panning
-        this.enablePan = true;
-        this.keyPanSpeed = 12.0;	// pixels moved per arrow key push
-        this.panDampingAlpha = 0.2;
+            // Set to false to disable panning
+            this.enablePan = true;
+            this.keyPanSpeed = 12.0;	// pixels moved per arrow key push
+            this.panDampingAlpha = 0.2;
 
-        // Set to false to disable use of the keys
-        this.enableKeys = true;
+            // Set to false to disable use of the keys
+            this.enableKeys = true;
 
-        // The four arrow keys
-        this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+            // The four arrow keys
+            this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
 
-        // Mouse buttons
-        this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
+            // Mouse buttons
+            this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
 
-        //Copy options from parameters
-        _.extend(this, options);
+            //Copy options from parameters
+            _.extend(this, options);
 
-        // for reset
-        this.target0 = this.target.clone();
-        this.position0 = this.object.position.clone();
-        this.zoom0 = this.object.zoom;
+            // for reset
+            this.target0 = this.target.clone();
+            this.position0 = this.camera.position.clone();
+            this.zoom0 = this.camera.zoom;
 
+            this._mouse = new THREE.Vector2();
 
-        //
-        // private vars
-        //
+            this._finalTargetDistance;
+            this._currentTargetDistance;
 
-        var scope = this;
-        var mouse = new THREE.Vector2();
+            this._changeEvent = { type: 'change' };
+            this._startEvent = { type: 'start' };
+            this._endEvent = { type: 'end' };
 
-        var changeEvent = { type: 'change' };
-        var startEvent = { type: 'start' };
-        var endEvent = { type: 'end' };
+            this._STATES = { NONE : - 1, DOLLY : 1, PAN : 2, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
+            this._state = this._STATES.NONE;
 
-        var STATE = { NONE : - 1, DOLLY : 1, PAN : 2, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
+            this._panTarget = new THREE.Vector3();
+            this._panCurrent = new THREE.Vector3();
 
-        var state = STATE.NONE;
+            this._minZoomPosition = new THREE.Vector3();
+            this._maxZoomPosition = new THREE.Vector3();
 
-        var finalTargetDistance;
-        var currentTargetDistance;
+            this._panStart = new THREE.Vector2();
+            this._panEnd = new THREE.Vector2();
+            this._panDelta = new THREE.Vector2();
 
-        var panTarget = new THREE.Vector3();
-        var panCurrent = new THREE.Vector3();
+            this._dollyStart = new THREE.Vector2();
+            this._dollyEnd = new THREE.Vector2();
+            this._dollyDelta = new THREE.Vector2();
 
-        var minZoomPosition = new THREE.Vector3();
-        var maxZoomPosition = new THREE.Vector3();
+            this._camOrientation = new THREE.Vector2();
+            this._lastMouse = new THREE.Vector2();
 
-        var panStart = new THREE.Vector2();
-        var panEnd = new THREE.Vector2();
-        var panDelta = new THREE.Vector2();
+            this._zoomAlpha;
 
-        var dollyStart = new THREE.Vector2();
-        var dollyEnd = new THREE.Vector2();
-        var dollyDelta = new THREE.Vector2();
+            this._init();
+        }
 
-        var camOrientation = new THREE.Vector2();
-        var lastMouse = new THREE.Vector2();
-
-        var zoomAlpha, init;
-
-        // Init (IIFE-style constructor)
-        (init = function(_scope){
-
-            if(_scope.target.distanceToPoint(_scope.object.position) == 0){
+        _init (){
+            if(this.target.distanceToPoint(this.camera.position) == 0){
                 throw new Error("ORIENTATION_UNKNOWABLE: initial Camera position cannot intersect target plane.");
             }
 
-            //establish initial camera orientation based on position w.r.t. _scope.target plane
+            //establish initial camera orientation based on position w.r.t. _this.target plane
             var intersection, ray;
             _.each([-1, 1], function(orientation){
                 if(intersection)
                     return;
-                ray = new THREE.Ray(scope.object.position, scope.target.normal.clone().multiplyScalar(orientation));
-                intersection = ray.intersectPlane(scope.target);
-            });
+                ray = new THREE.Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
+                intersection = ray.intersectPlane(this.target);
+            }.bind(this));
 
-            updateDollyTrack(ray);
+            this._updateDollyTrack(ray);
 
-            //place camera at _scope.initialZoom
-            _scope.object.position.lerpVectors(minZoomPosition, maxZoomPosition, _scope.initialZoom);
-            finalTargetDistance = currentTargetDistance = Math.abs(_scope.target.distanceToPoint(_scope.object.position));
+            this.camera.position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this.initialZoom);
+            this._finalTargetDistance = this._currentTargetDistance = Math.abs(this.target.distanceToPoint(this.camera.position));
 
-            scope.object.lookAt(maxZoomPosition); //set the orientation of the camera towards the map.
-            camOrientation = maxZoomPosition.clone().sub(scope.object.position).normalize();
+            this.camera.lookAt(this._maxZoomPosition); //set the orientation of the camera towards the map.
+            this._camOrientation = this._maxZoomPosition.clone().sub(this.camera.position).normalize();
 
-            updateZoomAlpha();
+            this._updateZoomAlpha();
 
-        })(this);
+            //Assign event listeners
 
-        //
-        // Public functions
-        //
+            this.domElement.addEventListener( 'contextmenu', this._onContextMenu.bind(this), false );
 
-        this.getZoomAlpha = function () {
-            return zoomAlpha;
-        };
+            this.domElement.addEventListener( 'mousedown', this._onMouseDown.bind(this), false );
+            this.domElement.addEventListener( 'mousewheel', this._onMouseWheel.bind(this), false );
+            this.domElement.addEventListener( 'MozMousePixelScroll', this._onMouseWheel.bind(this), false ); // firefox
 
-        this.reset = function () {
+            this.domElement.addEventListener( 'touchstart', this._onTouchStart.bind(this), false );
+            this.domElement.addEventListener( 'touchend', this._onTouchEnd.bind(this), false );
+            this.domElement.addEventListener( 'touchmove', this._onTouchMove.bind(this), false );
 
-            scope.target.copy( scope.target0 );
-            scope.object.position.copy( scope.position0 );
-            scope.object.zoom = scope.zoom0;
+            this.domElement.addEventListener( 'keydown', this._onKeyDown.bind(this), false );
 
-            scope.object.updateProjectionMatrix();
 
-            init(scope); //reinit
+            this.update();
+        }
 
-            scope.dispatchEvent( changeEvent );
+        getZoomAlpha () {
+            return this._zoomAlpha;
+        }
 
-            scope.update();
+        reset () {
 
-            state = STATE.NONE;
+            this.target.copy( this.target0 );
+            this.camera.position.copy( this.position0 );
+            this.camera.zoom = this.zoom0;
+
+            this.camera.updateProjectionMatrix();
+
+            this._init(); //reinit
+
+            this.dispatchEvent( changeEvent );
+
+            this.update();
+
+            this._state = this._STATES.NONE;
 
         };
 
         // this method is exposed, but perhaps it would be better if we can make it private...
-        this.update = function() {
-
-            var offset = new THREE.Vector3();
+        update () {
             var offsetMaxZoom = new THREE.Vector3();
             var offsetMinZoom = new THREE.Vector3();
 
-            return function update () {
+            var position = this.camera.position;
 
-                var position = scope.object.position;
+            offsetMaxZoom.copy( this._maxZoomPosition ).sub( this._panCurrent );
+            offsetMinZoom.copy( this._minZoomPosition ).sub( this._panCurrent );
 
-                offsetMaxZoom.copy( maxZoomPosition ).sub( panCurrent );
-                offsetMinZoom.copy( minZoomPosition ).sub( panCurrent );
+            // move target to panned location
+            this._panCurrent.lerp( this._panTarget, this.panDampingAlpha );
 
-                // move target to panned location
-                panCurrent.lerp( panTarget, scope.panDampingAlpha );
+            this._maxZoomPosition.copy( this._panCurrent ).add( offsetMaxZoom );
+            this._minZoomPosition.copy( this._panCurrent ).add( offsetMinZoom );
 
-                maxZoomPosition.copy( panCurrent ).add( offsetMaxZoom );
-                minZoomPosition.copy( panCurrent ).add( offsetMinZoom );
-
-                position.lerpVectors(minZoomPosition, maxZoomPosition, updateZoomAlpha());
-
-                return false;
-
-            };
-
-        }();
-
-        this.dispose = function() {
-
-            scope.domElement.removeEventListener( 'contextmenu', onContextMenu, false );
-            scope.domElement.removeEventListener( 'mousedown', onMouseDown, false );
-            scope.domElement.removeEventListener( 'mousewheel', onMouseWheel, false );
-            scope.domElement.removeEventListener( 'MozMousePixelScroll', onMouseWheel, false ); // firefox
-
-            scope.domElement.removeEventListener( 'touchstart', onTouchStart, false );
-            scope.domElement.removeEventListener( 'touchend', onTouchEnd, false );
-            scope.domElement.removeEventListener( 'touchmove', onTouchMove, false );
-
-            document.removeEventListener( 'mousemove', onMouseMove, false );
-            document.removeEventListener( 'mouseup', onMouseUp, false );
-
-            scope.domElement.removeEventListener( 'keydown', onKeyDown, false );
-
-            //scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
-
-        };
-
-        this.zoomToFitWidth = function(mesh){
-            var b_sphere = mesh.geometry.boundingSphere.clone();
-            updateTrackZoomTo(mesh);
-            var w = b_sphere.radius * 2;
-            finalTargetDistance = (w / Math.tan((Math.PI * scope.object.fov) / 360)) / (2 * scope.object.aspect);
-        };
-
-        //fits an object to fill screen height
-        this.zoomToFitHeight = function(mesh){
-            var b_sphere = mesh.geometry.boundingSphere.clone();
-            updateTrackZoomTo(mesh);
-            finalTargetDistance =  b_sphere.radius / Math.tan((Math.PI * scope.object.fov) / 360);
-        };
-
-        //
-        // Private functions
-        //
-
-        function updateTrackZoomTo(mesh){
-            var center = mesh.position.clone();
-            var cam_p = scope.object.position;
-            var ray_direction = (new THREE.Vector3().subVectors(center, cam_p)).normalize();
-
-            var ray = new THREE.Ray(cam_p, ray_direction);
-            updateDollyTrack(ray);
-        };
-
-        function updateZoomAlpha(){
-            finalTargetDistance = Math.max( scope.minDistance, Math.min( scope.maxDistance, finalTargetDistance ) );
-            var diff = currentTargetDistance - finalTargetDistance;
-            var damping_alpha = scope.zoomDampingAlpha;
-            currentTargetDistance -= diff * damping_alpha;
-            var rounding_places = 100000;
-            zoomAlpha = Math.abs(Math.round((1 - ((currentTargetDistance - scope.minDistance) / (scope.maxDistance - scope.minDistance))) * rounding_places ) / rounding_places);
-
-            return zoomAlpha;
+            position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this._updateZoomAlpha());
         }
 
-        function updateDollyTrack(ray){
+        dispose () {
+            this.domElement.removeEventListener( 'contextmenu', this._onContextMenu, false );
+            this.domElement.removeEventListener( 'mousedown', this._onMouseDown, false );
+            this.domElement.removeEventListener( 'mousewheel', this._onMouseWheel, false );
+            this.domElement.removeEventListener( 'MozMousePixelScroll', this._onMouseWheel, false ); // firefox
 
-            // calculate objects intersecting the picking ray
-            var intersect = ray.intersectPlane(scope.target);
+            this.domElement.removeEventListener( 'touchstart', this._onTouchStart, false );
+            this.domElement.removeEventListener( 'touchend', this._onTouchEnd, false );
+            this.domElement.removeEventListener( 'touchmove', this._onTouchMove, false );
+
+            document.removeEventListener( 'mousemove', this._onMouseMove, false );
+            document.removeEventListener( 'mouseup', this._onMouseUp, false );
+
+            this.domElement.removeEventListener( 'keydown', this._onKeyDown, false );
+        };
+
+        zoomToFit (mesh){
+            this._panTarget = mesh.localToWorld(mesh.geometry.boundingSphere.center.clone());
+            var vFOV = this.camera.fov * (Math.PI / 180);
+            var hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
+            var sin = Math.sin(Math.min(hFOV, vFOV) * 0.5);
+            this._finalTargetDistance = (mesh.geometry.boundingSphere.radius / sin);
+        };
+
+        _updateZoomAlpha(){
+            this._finalTargetDistance = Math.max( this.minDistance, Math.min( this.maxDistance, this._finalTargetDistance ) );
+            var diff = this._currentTargetDistance - this._finalTargetDistance;
+            var damping_alpha = this.zoomDampingAlpha;
+            this._currentTargetDistance -= diff * damping_alpha;
+            var rounding_places = 100000;
+            this._zoomAlpha = Math.abs(Math.round((1 - ((this._currentTargetDistance - this.minDistance) / (this.maxDistance - this.minDistance))) * rounding_places ) / rounding_places);
+
+            return this._zoomAlpha;
+        }
+
+        _updateDollyTrack(ray){
+
+            // calculate cameras intersecting the picking ray
+            var intersect = ray.intersectPlane(this.target);
 
             if(intersect){
-                maxZoomPosition.addVectors(intersect, new THREE.Vector3().subVectors(scope.object.position, intersect).normalize().multiplyScalar(scope.minDistance));
-                minZoomPosition.copy(calculateMinZoom(scope.object.position, intersect));
+                this._maxZoomPosition.addVectors(intersect, new THREE.Vector3().subVectors(this.camera.position, intersect).normalize().multiplyScalar(this.minDistance));
+                this._minZoomPosition.copy(this._calculateMinZoom(this.camera.position, intersect));
 
-                finalTargetDistance = currentTargetDistance = intersect.clone().sub(scope.object.position).length();
+                this._finalTargetDistance = this._currentTargetDistance = intersect.clone().sub(this.camera.position).length();
             }
         }
 
-        function getZoomScale() {
-
-            return Math.pow( 0.95, scope.zoomSpeed );
-
+        _getZoomScale() {
+            return Math.pow( 0.95, this.zoomSpeed );
         }
 
 
-        var panLeft = function() {
+        _panLeft( distance, cameraMatrix ) {
+            var v = new THREE.Vector3();
+
+            v.setFromMatrixColumn( cameraMatrix, 0 ); // get X column of cameraMatrix
+            v.multiplyScalar( - distance );
+
+            this._panTarget.add( v );
+        }
+
+        _panUp ( distance, cameraMatrix ) {
 
             var v = new THREE.Vector3();
 
-            return function panLeft( distance, objectMatrix ) {
+            v.setFromMatrixColumn( cameraMatrix, 1 ); // get Y column of cameraMatrix
+            v.multiplyScalar( distance );
 
-                v.setFromMatrixColumn( objectMatrix, 0 ); // get X column of objectMatrix
-                v.multiplyScalar( - distance );
+            this._panTarget.add( v );
 
-                panTarget.add( v );
-
-            };
-
-        }();
-
-        var panUp = function() {
-
-            var v = new THREE.Vector3();
-
-            return function panUp( distance, objectMatrix ) {
-
-                v.setFromMatrixColumn( objectMatrix, 1 ); // get Y column of objectMatrix
-                v.multiplyScalar( distance );
-
-                panTarget.add( v );
-
-            };
-
-        }();
+        }
 
         // deltaX and deltaY are in pixels; right and down are positive
-        var pan = function() {
+        _pan (deltaX, deltaY) {
 
-            return function pan ( deltaX, deltaY ) {
+            var element = this.domElement === document ? this.domElement.body : this.domElement;
 
+            var r = new THREE.Ray(this.camera.position, this._camOrientation);
+            var targetDistance = r.distanceToPlane(this.target);
 
-                var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+            // half of the fov is center to top of screen
+            targetDistance *= Math.tan( ( this.camera.fov / 2 ) * Math.PI / 180.0 );
 
-                var r = new THREE.Ray(scope.object.position, camOrientation);
-                var targetDistance = r.distanceToPlane(scope.target);
+            // we actually don't use screenWidth, since perspective camera is fixed to screen height
+            this._panLeft( 2 * deltaX * targetDistance / element.clientHeight, this.camera.matrix );
+            this._panUp( 2 * deltaY * targetDistance / element.clientHeight, this.camera.matrix );
 
-                // half of the fov is center to top of screen
-                targetDistance *= Math.tan( ( scope.object.fov / 2 ) * Math.PI / 180.0 );
+        }
 
-                // we actually don't use screenWidth, since perspective camera is fixed to screen height
-                panLeft( 2 * deltaX * targetDistance / element.clientHeight, scope.object.matrix );
-                panUp( 2 * deltaY * targetDistance / element.clientHeight, scope.object.matrix );
-
-
-            };
-
-        }();
-
-        function dollyIn( dollyScale ) {
-
-            if ( cameraOfKnownType() ) {
-
-                finalTargetDistance /= dollyScale;
-
+        _dollyIn( dollyScale ) {
+            if ( this._cameraOfKnownType() ) {
+                this._finalTargetDistance /= dollyScale;
             } else {
-
                 console.warn( 'WARNING: MapControls.js encountered an unknown camera type - dolly/zoom disabled.' );
-                scope.enableZoom = false;
-
+                this.enableZoom = false;
             }
         }
 
-        function dollyOut( dollyScale ) {
-
-            if ( cameraOfKnownType() ) {
-
-                finalTargetDistance *= dollyScale;
-
+        _dollyOut( dollyScale ) {
+            if ( this._cameraOfKnownType() ) {
+                this._finalTargetDistance *= dollyScale;
             } else {
-
                 console.warn( 'WARNING: MapControls.js encountered an unknown camera type - dolly/zoom disabled.' );
-                scope.enableZoom = false;
-
+                this.enableZoom = false;
             }
         }
 
-        function cameraOfKnownType() {
-            return scope.object.type === 'PerspectiveCamera'
+        _cameraOfKnownType() {
+            return this.camera.type === 'PerspectiveCamera'
         }
 
-        function handleUpdateDollyTrackMouse(event){
-            var prevMouse = mouse.clone();
-            mouse.set(( event.offsetX / domElement.clientWidth ) * 2 - 1, - ( event.offsetY / domElement.clientHeight ) * 2 + 1);
+        _handleUpdateDollyTrackMouse(event){
+            var prevMouse = this._mouse.clone();
+            this._mouse.set(( event.offsetX / this.domElement.clientWidth ) * 2 - 1, - ( event.offsetY / this.domElement.clientHeight ) * 2 + 1);
 
-            if(!prevMouse.equals(mouse)){
+            if(!prevMouse.equals(this._mouse)){
                 var rc = new THREE.Raycaster();
-                rc.setFromCamera(mouse, scope.object);
-                updateDollyTrack(rc.ray);
+                rc.setFromCamera(this._mouse, this.camera);
+                this._updateDollyTrack(rc.ray);
             }
         }
 
-        function handleMouseDownDolly( event ) {
+        _handleMouseDownDolly( event ) {
+            this._handleUpdateDollyTrackMouse(event);
+            this._dollyStart.set( event.offsetX, event.offsetY );
+        }
 
-            handleUpdateDollyTrackMouse(event);
+        _handleMouseDownPan( event ) {
 
-            //console.log( 'handleMouseDownDolly' );
-
-            dollyStart.set( event.offsetX, event.offsetY );
+            this._panStart.set( event.offsetX, event.offsetY );
 
         }
 
-        function handleMouseDownPan( event ) {
+        _handleMouseMoveDolly( event ) {
 
-            //console.log( 'handleMouseDownPan' );
-
-            panStart.set( event.offsetX, event.offsetY );
-
-        }
-
-        function handleMouseMoveDolly( event ) {
-
-            handleUpdateDollyTrackMouse(event);
+            this._handleUpdateDollyTrackMouse(event);
 
             //console.log( 'handleMouseMoveDolly' );
 
-            dollyEnd.set( event.offsetX, event.offsetY );
+            this._dollyEnd.set( event.offsetX, event.offsetY );
 
-            dollyDelta.subVectors( dollyEnd, dollyStart );
+            this._dollyDelta.subVectors(this._dollyEnd, this._dollyStart );
 
-            if ( dollyDelta.y > 0 ) {
+            if ( this._dollyDelta.y > 0 ) {
 
-                dollyIn( getZoomScale() );
+                this._dollyIn( this._getZoomScale() );
 
-            } else if ( dollyDelta.y < 0 ) {
+            } else if ( this._dollyDelta.y < 0 ) {
 
-                dollyOut( getZoomScale() );
+                this._dollyOut( this._getZoomScale() );
 
             }
 
-            dollyStart.copy( dollyEnd );
+            this._dollyStart.copy( this._dollyEnd );
 
-            scope.update();
+            this.update();
 
         }
 
-        function handleMouseMovePan( event ) {
+        _handleMouseMovePan( event ) {
 
             //console.log( 'handleMouseMovePan' );
 
-            panEnd.set( event.offsetX, event.offsetY );
+            this._panEnd.set( event.offsetX, event.offsetY );
 
-            panDelta.subVectors( panEnd, panStart );
+            this._panDelta.subVectors( this._panEnd, this._panStart );
 
-            pan( panDelta.x, panDelta.y );
+            this._pan( this._panDelta.x, this._panDelta.y );
 
-            panStart.copy( panEnd );
+            this._panStart.copy( this._panEnd );
 
-            scope.update();
+            this.update();
 
         }
 
-        function handleMouseUp( event ) {
+        _handleMouseUp( event ) {
 
             //console.log( 'handleMouseUp' );
 
         }
 
-        function calculateMinZoom(cam_pos, map_intersect){
+        _calculateMinZoom(cam_pos, map_intersect){
             return map_intersect.clone().add(
                 cam_pos.clone()
                 .sub(map_intersect)
                 .normalize()
-                .multiplyScalar(scope.maxDistance)
+                .multiplyScalar(this.maxDistance)
             );
         }
 
 
-        function handleMouseWheel( event ) {
-            handleUpdateDollyTrackMouse(event);
+        _handleMouseWheel( event ) {
+            this._handleUpdateDollyTrackMouse(event);
 
             var delta = 0;
 
@@ -446,48 +383,45 @@ var MapControls = function ( object, domElement, options ) {
             }
 
             if ( delta > 0 ) {
-                dollyOut( getZoomScale() );
+                this._dollyOut( this._getZoomScale() );
             } else if ( delta < 0 ) {
-                dollyIn( getZoomScale() );
+                this._dollyIn( this._getZoomScale() );
             }
 
-
-
-            scope.update();
-
+            this.update();
         }
 
-        function handleKeyDown( event ) {
+        _handleKeyDown( event ) {
 
             //console.log( 'handleKeyDown' );
 
             switch ( event.keyCode ) {
 
-                case scope.keys.UP:
-                    pan( 0, scope.keyPanSpeed );
-                    scope.update();
+                case this.keys.UP:
+                    this._pan( 0, this.keyPanSpeed );
+                    this.update();
                     break;
 
-                case scope.keys.BOTTOM:
-                    pan( 0, - scope.keyPanSpeed );
-                    scope.update();
+                case this.keys.BOTTOM:
+                    this._pan( 0, - this.keyPanSpeed );
+                    this.update();
                     break;
 
-                case scope.keys.LEFT:
-                    pan( scope.keyPanSpeed, 0 );
-                    scope.update();
+                case this.keys.LEFT:
+                    this._pan( this.keyPanSpeed, 0 );
+                    this.update();
                     break;
 
-                case scope.keys.RIGHT:
-                    pan( - scope.keyPanSpeed, 0 );
-                    scope.update();
+                case this.keys.RIGHT:
+                    this._pan( - this.keyPanSpeed, 0 );
+                    this.update();
                     break;
 
             }
 
         }
 
-        function handleUpdateDollyTrackTouch( event ){
+        _handleUpdateDollyTrackTouch( event ){
             var centerpoint = new THREE.Vector2();
 
             var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
@@ -500,32 +434,32 @@ var MapControls = function ( object, domElement, options ) {
             mouse.x = ( centerpoint.x / domElement.clientWidth ) * 2 - 1;
             mouse.y = - ( centerpoint.y / domElement.clientHeight ) * 2 + 1;
 
-            updateDollyTrack(mouse);
+            this._updateDollyTrack(mouse);
         }
 
-        function handleTouchStartDolly( event ) {
-            handleUpdateDollyTrackTouch(event);
+        _handleTouchStartDolly( event ) {
+            this._handleUpdateDollyTrackTouch(event);
 
             var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
             var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
 
             var distance = Math.sqrt( dx * dx + dy * dy );
 
-            dollyStart.set( 0, distance );
+            this._dollyStart.set( 0, distance );
 
         }
 
-        function handleTouchStartPan( event ) {
+        _handleTouchStartPan( event ) {
 
             //console.log( 'handleTouchStartPan' );
 
-            panStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+            this._panStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
 
         }
 
 
-        function handleTouchMoveDolly( event ) {
-            handleUpdateDollyTrackTouch(event);
+        _handleTouchMoveDolly( event ) {
+            this._handleUpdateDollyTrackTouch(event);
 
             //console.log( 'handleTouchMoveDolly' );
 
@@ -534,188 +468,181 @@ var MapControls = function ( object, domElement, options ) {
 
             var distance = Math.sqrt( dx * dx + dy * dy );
 
-            dollyEnd.set( 0, distance );
+            this._dollyEnd.set( 0, distance );
 
-            dollyDelta.subVectors( dollyEnd, dollyStart );
+            this._dollyDelta.subVectors( this._dollyEnd, this._dollyStart );
 
-            if ( dollyDelta.y > 0 ) {
+            if ( this._dollyDelta.y > 0 ) {
 
-                dollyOut( getZoomScale() );
+                this._dollyOut( this._getZoomScale() );
 
-            } else if ( dollyDelta.y < 0 ) {
+            } else if ( this._dollyDelta.y < 0 ) {
 
-                dollyIn( getZoomScale() );
+                this._dollyIn( this._getZoomScale() );
 
             }
 
-            dollyStart.copy( dollyEnd );
+            this._dollyStart.copy( this._dollyEnd );
 
-            scope.update();
-
-        }
-
-        function handleTouchMovePan( event ) {
-
-            //console.log( 'handleTouchMovePan' );
-
-            panEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
-
-            panDelta.subVectors( panEnd, panStart );
-
-            pan( panDelta.x, panDelta.y );
-
-            panStart.copy( panEnd );
-
-            scope.update();
+            this.update();
 
         }
 
-        function handleTouchEnd( event ) {
+        _handleTouchMovePan( event ) {
 
+            this._panEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+            this._panDelta.subVectors( this._panEnd, this._panStart );
+
+            this._pan( this._panDelta.x, this._panDelta.y );
+
+            this._panStart.copy( this._panEnd );
+
+            this.update();
+
+        }
+
+        _handleTouchEnd( event ) {
             //console.log( 'handleTouchEnd' );
-
         }
 
         //
         // event handlers - FSM: listen for events and reset state
         //
 
-        function onMouseDown( event ) {
+        _onMouseDown( event ) {
 
-            if ( scope.enabled === false ) return;
-
-            event.preventDefault();
-
-            if ( event.button === scope.mouseButtons.ZOOM ) {
-
-                if ( scope.enableZoom === false ) return;
-
-                handleMouseDownDolly( event );
-
-                state = STATE.DOLLY;
-
-            } else if ( event.button === scope.mouseButtons.PAN ) {
-
-                if ( scope.enablePan === false ) return;
-
-                handleMouseDownPan( event );
-
-                state = STATE.PAN;
-
-            }
-
-            if ( state !== STATE.NONE ) {
-
-                document.addEventListener( 'mousemove', onMouseMove, false );
-                document.addEventListener( 'mouseup', onMouseUp, false );
-
-                scope.dispatchEvent( startEvent );
-
-            }
-
-        }
-
-        function onMouseMove( event ) {
-
-            if ( scope.enabled === false ) return;
+            if ( this.enabled === false ) return;
 
             event.preventDefault();
 
-            if ( state === STATE.DOLLY ) {
+            if ( event.button === this.mouseButtons.ZOOM ) {
 
-                if ( scope.enableZoom === false ) return;
+                if ( this.enableZoom === false ) return;
 
-                handleMouseMoveDolly( event );
+                this._handleMouseDownDolly( event );
 
-            } else if ( state === STATE.PAN ) {
+                this._state = this._STATES.DOLLY;
 
-                if ( scope.enablePan === false ) return;
+            } else if ( event.button === this.mouseButtons.PAN ) {
 
-                handleMouseMovePan( event );
+                if ( this.enablePan === false ) return;
+
+                this._handleMouseDownPan( event );
+
+                this._state = this._STATES.PAN;
+
+            }
+
+            if ( this._state !== this._STATES.NONE ) {
+
+                document.addEventListener( 'mousemove', this._onMouseMove.bind(this), false );
+                document.addEventListener( 'mouseup', this._onMouseUp.bind(this), false );
+
+                this.dispatchEvent( this._startEvent );
 
             }
 
         }
 
-        function onMouseUp( event ) {
+        _onMouseMove( event ) {
 
-            if ( scope.enabled === false ) return;
+            if ( this.enabled === false ) return;
 
-            handleMouseUp( event );
+            event.preventDefault();
 
-            document.removeEventListener( 'mousemove', onMouseMove, false );
-            document.removeEventListener( 'mouseup', onMouseUp, false );
+            if ( this._state === this._STATES.DOLLY ) {
 
-            scope.dispatchEvent( endEvent );
+                if ( this.enableZoom === false ) return;
 
-            state = STATE.NONE;
+                this._handleMouseMoveDolly( event );
+
+            } else if ( this._state === this._STATES.PAN ) {
+
+                if ( this.enablePan === false ) return;
+
+                this._handleMouseMovePan( event );
+            }
+        }
+
+        _onMouseUp( event ) {
+
+            if ( this.enabled === false ) return;
+
+            this._handleMouseUp( event );
+
+            document.removeEventListener( 'mousemove', this._onMouseMove, false );
+            document.removeEventListener( 'mouseup', this._onMouseUp, false );
+
+            this.dispatchEvent( this._endEvent );
+
+            this._state = this._STATES.NONE;
 
         }
 
-        function onMouseWheel( event ) {
-
-            if ( scope.enabled === false || scope.enableZoom === false || ( state !== STATE.NONE ) ) return;
+        _onMouseWheel( event ) {
+            if ( this.enabled === false || this.enableZoom === false || ( this._state !== this._STATES.NONE ) ) return;
 
             event.preventDefault();
             event.stopPropagation();
 
-            handleMouseWheel( event );
+            this._handleMouseWheel( event );
 
-            scope.dispatchEvent( startEvent ); // not sure why these are here...
-            scope.dispatchEvent( endEvent );
-
-        }
-
-        function onKeyDown( event ) {
-
-            if ( scope.enabled === false || scope.enableKeys === false || scope.enablePan === false ) return;
-
-            handleKeyDown( event );
+            this.dispatchEvent( this._startEvent ); // not sure why these are here...
+            this.dispatchEvent( this._endEvent );
 
         }
 
-        function onTouchStart( event ) {
+        _onKeyDown( event ) {
 
-            if ( scope.enabled === false ) return;
+            if ( this.enabled === false || this.enableKeys === false || this.enablePan === false ) return;
+
+            this._handleKeyDown( event );
+
+        }
+
+        _onTouchStart( event ) {
+
+            if ( this.enabled === false ) return;
 
             switch ( event.touches.length ) {
                 case 1: // three-fingered touch: pan
 
-                    if ( scope.enablePan === false ) return;
+                    if ( this.enablePan === false ) return;
 
-                    handleTouchStartPan( event );
+                    this._handleTouchStartPan( event );
 
-                    state = STATE.TOUCH_PAN;
+                    this._state = this._STATES.TOUCH_PAN;
 
                     break;
 
                 case 2:	// two-fingered touch: dolly
 
-                    if ( scope.enableZoom === false ) return;
+                    if ( this.enableZoom === false ) return;
 
-                    handleTouchStartDolly( event );
+                    this._handleTouchStartDolly( event );
 
-                    state = STATE.TOUCH_DOLLY;
+                    this._state = this._STATES.TOUCH_DOLLY;
 
                     break;
 
                 default:
 
-                    state = STATE.NONE;
+                    this._state = this._STATES.NONE;
 
             }
 
-            if ( state !== STATE.NONE ) {
+            if ( this._state !== this._STATES.NONE ) {
 
-                scope.dispatchEvent( startEvent );
+                this.dispatchEvent( this._startEvent );
 
             }
 
         }
 
-        function onTouchMove( event ) {
+        _onTouchMove( event ) {
 
-            if ( scope.enabled === false ) return;
+            if ( this.enabled === false ) return;
 
             event.preventDefault();
             event.stopPropagation();
@@ -723,69 +650,46 @@ var MapControls = function ( object, domElement, options ) {
             switch ( event.touches.length ) {
 
                 case 1: // one-fingered touch: pan
-                    if ( scope.enablePan === false ) return;
-                    if ( state !== STATE.TOUCH_PAN ) return; // is this needed?...
+                    if ( this.enablePan === false ) return;
+                    if ( this._state !== this._STATES.TOUCH_PAN ) return; // is this needed?...
 
-                    handleTouchMovePan( event );
+                    this._handleTouchMovePan( event );
 
                     break;
 
                 case 2: // two-fingered touch: dolly
 
-                    if ( scope.enableZoom === false ) return;
-                    if ( state !== STATE.TOUCH_DOLLY ) return; // is this needed?...
+                    if ( this.enableZoom === false ) return;
+                    if ( this._state !== this._STATES.TOUCH_DOLLY ) return; // is this needed?...
 
-                    handleTouchMoveDolly( event );
+                    this._handleTouchMoveDolly( event );
 
                     break;
 
                 default:
 
-                    state = STATE.NONE;
+                    this._state = this._STATES.NONE;
 
             }
 
         }
 
-        function onTouchEnd( event ) {
+        _onTouchEnd( event ) {
 
-            if ( scope.enabled === false ) return;
+            if ( this.enabled === false ) return;
 
-            handleTouchEnd( event );
+            this._handleTouchEnd( event );
 
-            scope.dispatchEvent( endEvent );
+            this.dispatchEvent( this._endEvent );
 
-            state = STATE.NONE;
+            this._state = this._STATES.NONE;
 
         }
 
-        function onContextMenu( event ) {
-
+        _onContextMenu( event ) {
             event.preventDefault();
-
         }
-
-        //
-
-        scope.domElement.addEventListener( 'contextmenu', onContextMenu, false );
-
-        scope.domElement.addEventListener( 'mousedown', onMouseDown, false );
-        scope.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
-        scope.domElement.addEventListener( 'MozMousePixelScroll', onMouseWheel, false ); // firefox
-
-        scope.domElement.addEventListener( 'touchstart', onTouchStart, false );
-        scope.domElement.addEventListener( 'touchend', onTouchEnd, false );
-        scope.domElement.addEventListener( 'touchmove', onTouchMove, false );
-
-        scope.domElement.addEventListener( 'keydown', onKeyDown, false );
-
-        // force an update at start
-
-        this.update();
 
 };
-
-MapControls.prototype = Object.create( THREE.EventDispatcher.prototype );
-MapControls.prototype.constructor = MapControls;
 
 export default MapControls;

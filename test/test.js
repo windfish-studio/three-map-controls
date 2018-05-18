@@ -4,7 +4,7 @@ var tape = require('tape');
 var dom = require('dom-stub');
 var THREE = require('three');
 var _ = require('lodash');
-var MapControls = require('../lib/three-map-controls.js').default;
+var MapControls = require('../src/three-map-controls.js').default;
 
 
 //Init stubs / test objects

@@ -1,4 +1,4 @@
 
 var gulp = require('gulp');
-require('./gulp/browserify');
+require('./gulp/webpack');
 
