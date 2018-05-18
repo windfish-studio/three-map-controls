@@ -205,8 +205,7 @@ class MapControls extends THREE.EventDispatcher{
 
             var vFOV = this.camera.fov * (Math.PI / 180);
             var hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
-            var sin = Math.sin(Math.min(hFOV, vFOV) * 0.5);
-            this._finalTargetDistance = (mesh.geometry.boundingSphere.radius / sin);
+            this._finalTargetDistance = (mesh.geometry.boundingSphere.radius / Math.sin(Math.min(hFOV, vFOV) * 0.5));
         };
 
         _updateZoomAlpha(){

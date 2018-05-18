@@ -4,7 +4,7 @@ var _ = require('lodash');
 
 window.onload = function(){
     var container = document.body;
-    var camera, scene, renderer;
+    var scene, renderer;
     var meshes = [];
     var dims = 10;
     var selectedObject = null;
@@ -14,7 +14,7 @@ window.onload = function(){
     animate();
 
     function init(){
-        camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+        var camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
         camera.position.z = 20;
 
         scene = new THREE.Scene();
@@ -49,7 +49,7 @@ window.onload = function(){
             maxDistance: 20
         });
 
-        renderer.domElement.addEventListener( 'resize', onWindowResize, false );
+        window.addEventListener( 'resize', onWindowResize, false );
         renderer.domElement.addEventListener( 'mousedown', pick);
         renderer.domElement.addEventListener( 'dblclick', zoomTo );
     }
@@ -69,7 +69,7 @@ window.onload = function(){
 
         var raycaster = new THREE.Raycaster();
 
-        raycaster.setFromCamera(mouse, camera);
+        raycaster.setFromCamera(mouse, controls.camera);
 
         // calculate objects intersecting the picking ray
         var intersects = raycaster.intersectObjects( scene.children, true );
@@ -82,8 +82,9 @@ window.onload = function(){
     }
 
     function onWindowResize(){
-        camera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
-        camera.updateProjectionMatrix();
+        renderer.setSize( window.innerWidth, window.innerHeight );
+        controls.camera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
+        controls.camera.updateProjectionMatrix();
         renderer.setSize( renderer.domElement.clientWidth, renderer.domElement.clientHeight );
     }
 
@@ -95,6 +96,6 @@ window.onload = function(){
             mesh.rotation.y += 0.01;
         });
         controls.update();
-        renderer.render( scene, camera );
+        renderer.render( scene, controls.camera );
     }
 };
