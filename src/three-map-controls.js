@@ -716,4 +716,5 @@ class MapControls extends THREE.EventDispatcher{
 
 };
 
+THREE.MapControls = MapControls;
 export default MapControls;

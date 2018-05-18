@@ -1,5 +1,5 @@
 var THREE = require('three');
-var MapControls = require('./three-map-controls.js').default;
+var MapControls = require('./three-map-controls.js').default || THREE.MapControls;
 var _ = require('lodash');
 
 window.onload = function(){
