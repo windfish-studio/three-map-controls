@@ -35,7 +35,7 @@ class MapControls extends THREE.EventDispatcher{
             // Set to false to disable panning
             this.enablePan = true;
             this.keyPanSpeed = 12.0;	// pixels moved per arrow key push
-            this.panDampingAlpha = 0.2;
+            this.panDampingAlpha = 0.1;
 
             // Set to false to disable use of the keys
             this.enableKeys = true;
@@ -94,15 +94,7 @@ class MapControls extends THREE.EventDispatcher{
             }
 
             //establish initial camera orientation based on position w.r.t. _this.target plane
-            var intersection, ray;
-            _.each([-1, 1], function(orientation){
-                if(intersection)
-                    return;
-                ray = new THREE.Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
-                intersection = ray.intersectPlane(this.target);
-            }.bind(this));
-
-            this._updateDollyTrack(ray);
+            this._straightDollyTrack();
 
             this.camera.position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this.initialZoom);
             this._finalTargetDistance = this._currentTargetDistance = Math.abs(this.target.distanceToPoint(this.camera.position));
@@ -130,6 +122,26 @@ class MapControls extends THREE.EventDispatcher{
             this.update();
         }
 
+        _intersectCameraTarget(){
+            var intersection, ray;
+            _.each([-1, 1], function(orientation){
+                if(intersection)
+                    return;
+
+                ray = new THREE.Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
+                intersection = ray.intersectPlane(this.target);
+            }.bind(this));
+
+            return {
+                intersection: intersection,
+                ray: ray
+            }
+        }
+
+        _straightDollyTrack(){
+            this._updateDollyTrack(this._intersectCameraTarget().ray);
+        }
+
         getZoomAlpha () {
             return this._zoomAlpha;
         }
@@ -154,19 +166,17 @@ class MapControls extends THREE.EventDispatcher{
 
         // this method is exposed, but perhaps it would be better if we can make it private...
         update () {
-            var offsetMaxZoom = new THREE.Vector3();
-            var offsetMinZoom = new THREE.Vector3();
-
+            var panDelta = new THREE.Vector3();
+            var oldPanCurrent = new THREE.Vector3();
             var position = this.camera.position;
 
-            offsetMaxZoom.copy( this._maxZoomPosition ).sub( this._panCurrent );
-            offsetMinZoom.copy( this._minZoomPosition ).sub( this._panCurrent );
-
             // move target to panned location
+            oldPanCurrent.copy(this._panCurrent);
             this._panCurrent.lerp( this._panTarget, this.panDampingAlpha );
+            panDelta.subVectors(this._panCurrent, oldPanCurrent);
 
-            this._maxZoomPosition.copy( this._panCurrent ).add( offsetMaxZoom );
-            this._minZoomPosition.copy( this._panCurrent ).add( offsetMinZoom );
+            this._maxZoomPosition.add(panDelta);
+            this._minZoomPosition.add(panDelta);
 
             position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this._updateZoomAlpha());
         }
@@ -188,7 +198,11 @@ class MapControls extends THREE.EventDispatcher{
         };
 
         zoomToFit (mesh){
-            this._panTarget = mesh.localToWorld(mesh.geometry.boundingSphere.center.clone());
+            this._panTarget.copy(mesh.localToWorld(mesh.geometry.boundingSphere.center.clone()));
+            this._panCurrent.copy(this._intersectCameraTarget().intersection);
+
+            this._straightDollyTrack();
+
             var vFOV = this.camera.fov * (Math.PI / 180);
             var hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
             var sin = Math.sin(Math.min(hFOV, vFOV) * 0.5);
