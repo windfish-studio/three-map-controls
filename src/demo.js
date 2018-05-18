@@ -2,7 +2,7 @@ var THREE = require('three');
 var MapControls = require('./three-map-controls.js').default || THREE.MapControls;
 var _ = require('lodash');
 
-window.onload = function(){
+var load = function(){
     var container = document.body;
     var scene, renderer;
     var meshes = [];
@@ -99,3 +99,8 @@ window.onload = function(){
         renderer.render( scene, controls.camera );
     }
 };
+
+if(document.readyState == 'complete')
+    load();
+else
+    window.onload = load;
