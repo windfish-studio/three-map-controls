@@ -144,7 +144,7 @@ class MapControls extends THREE.EventDispatcher{
 
             this._init(); //reinit
 
-            this.dispatchEvent( changeEvent );
+            this.dispatchEvent( this._changeEvent );
 
             this.update();
 

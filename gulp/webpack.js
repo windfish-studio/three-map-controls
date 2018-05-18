@@ -10,6 +10,7 @@ var BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlug
 var dist_path = path.resolve(__dirname, '../dist');
 var app_entrypoint = path.resolve(__dirname, '../src/three-map-controls.js');
 var demo_entrypoint = path.resolve(__dirname, '../src/demo.js');
+var test_entrypoint = path.resolve(__dirname, '../src/test.js');
 
 var vendor_deps = Object.keys(require('../package.json').dependencies);
 var extra_plugins = [];
@@ -60,6 +61,10 @@ gulp.task('webpack-vendor', function () {
             publicPath: '/'
         },
 
+        node: {
+            fs: "empty"
+        },
+
         plugins: [
             new webpack.DllPlugin({
                 name: '[name]',
@@ -73,7 +78,8 @@ gulp.task('webpack-app-conf', ['webpack-vendor'], function () {
     appConf = {
         entry: {
             "three-map-controls": app_entrypoint,
-            "demo": demo_entrypoint
+            "demo": demo_entrypoint,
+            "test": test_entrypoint
         },
         output: {
             path: dist_path,

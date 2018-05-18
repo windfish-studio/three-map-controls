@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "three": "0.83.0",
-    "lodash": "4.16.4"
+    "lodash": "4.16.4",
+    "tape": "^4.5.1"
   },
   "devDependencies": {
     "webpack": "4.6.0",
@@ -24,7 +25,6 @@
     "chalk-log": "1.2.0",
     "chalk": "^2.4.1",
     "dom-stub": "1.0.1",
-    "tape": "^4.5.1",
     "gulp-live-server": "0.0.30",
     "browserify-row-flow": "0.1.0",
     "watchify": "3.7.0",
