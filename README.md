@@ -3,6 +3,20 @@ Map controls class for threeJS (pan and zoom with respect to a THREE.Plane)
 
 Works with mobile device touch events.
 
+CHANGELOG:
+
+v1.0.1 - May 19 2018; 
+
+Update the project to use ES6-style classes and function scoping features. 
+Removes previous ES6 compatability hacks. Switches out browserify for webpack.
+Packages demo and test bundles with webpack, moving test
+suite to the client. 
+
+Finally adding a universal zoomToFit(mesh) function which optimally fills the screen with a given geometry
+by dollying the camera towards or away from it. 
+
+Adjust the relationship of pan/dolly Vector math within update(). 
+
 ##usage
 
 ```javascript
@@ -59,6 +73,17 @@ this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
 ##public functions
 ```javascript
 
+//will automatically center mesh and adjust the camera position so that mesh
+//fits the screen. if center, width or height are ommitted the algorithm will 
+//use a boundingSphere, which will produce a less-accurate fit for complex 
+//geometry. 
+// 
+//Due to the rectangular nature of screens, if one passes the bounding box  
+//center as well its width/height (relative to the target plane), the geometry
+//will reach the edges of the screen. 
+
+this.zoomToFit(mesh, center, width, height)
+
 // returns current zoom value [range between 0 and 1];
 // O represents the camera at maxDistance from the target-plane, and 1 is the camera at minDistance.
 this.getZoomAlpha();
@@ -70,8 +95,6 @@ this.update();
 
 ##TAP-compatible tests
 ```
-$ node test/test.js
-
 TAP version 13
 # shouldn't allow initialization if camera intersects plane
 ok 1 camera cannot intersect target plane on init
