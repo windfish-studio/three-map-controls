@@ -1,103 +1,206 @@
 var THREE = require('three');
 var MapControls = require('./three-map-controls.js').default || THREE.MapControls;
-var _ = require('lodash');
 
-window.MapControlsDemo = function(){
-    var container = document.body;
-    var scene, renderer;
-    var meshes = [];
-    var dims = 10;
-    var selectedObject = null;
-    var controls;
+class MapControlsDemo {
+    constructor (mode) {
+        this.container = document.body;
+        this.scene = new THREE.Scene();
+        this.renderer = null;
+        this.meshes = [];
+        this.dims = 10;
+        this.selectedObject = null;
+        this.controls;
+        this.mode;
 
-    init();
-    animate();
+        this.init();
+        this.setMode(mode);
+        this.animate();
+    }
 
-    function init(){
-        var camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
-        camera.position.z = 20;
+    setMode(mode) {
+        this.mode = mode;
+        const links = {
+            sphere: document.getElementById('sphere-link'),
+            plane: document.getElementById('plane-link')
+        };
 
-        scene = new THREE.Scene();
+        links[this.mode].style.display = 'none';
+        links[(this.mode == 'plane')? 'sphere' : 'plane'].style.display = 'inline-block';
 
-        var offset = 3;
+        this.meshes.forEach((_m) => {
+            this.scene.remove(_m);
+        });
 
-        for(var x = 0; x < dims; x++){
-            for(var y = 0; y < dims; y++){
-                var geometry = new THREE.CubeGeometry(1, 1, 1);
-                var material = new THREE.MeshNormalMaterial();
+        switch(this.mode){
+            case 'sphere':
+                this.initSphere();
+                break;
+            case 'plane':
+                this.initPlane();
+                break;
+        }
+    }
 
-                var mesh = new THREE.Mesh( geometry, material );
-                mesh.position.x += ((-0.5 * dims * offset) + (x * offset));
-                mesh.position.y += ((-0.5 * dims * offset) + (y * offset));
+    initSphere(){
 
-                meshes.push(mesh);
+        var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+        camera.position.z = 40;
+        const radius = 10;
+        this.controls = new MapControls( camera, this.renderer.domElement, {
+            target: new THREE.Sphere(new THREE.Vector3(0,0,0), radius),
+            minDistance: 1,
+            maxDistance: 30
+        });
 
-                scene.add( mesh );
-                mesh.geometry.computeBoundingSphere();
-            }
+        const colors = [];
+
+        const geometry = new THREE.SphereBufferGeometry(radius, this.dims);
+        geometry.computeBoundingSphere();
+
+        const vertices = geometry.getAttribute('position').array;
+        for(var i = 0; i < vertices.length; i += 3){
+            var color = new THREE.Color();
+            var vert = new THREE.Vector3(vertices[i], vertices[i+1], vertices[i+2]);
+
+            color.setRGB(
+                ( vert.x / radius ) + 0.5,
+                ( vert.y / radius ) + 0.5,
+                ( vert.z / radius ) + 0.5
+            );
+
+            colors.push( color.r, color.g, color.b );
         }
 
-        renderer = new THREE.WebGLRenderer();
-        renderer.setPixelRatio( window.devicePixelRatio );
-        renderer.setSize( window.innerWidth, window.innerHeight );
+        geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( Float32Array.from(colors), 3 ) );
 
-        container.appendChild( renderer.domElement );
+        const points = new THREE.Points(
+            geometry,
+            new THREE.PointsMaterial( { size: 1, vertexColors: THREE.VertexColors } )
+        );
 
-        controls = new MapControls( camera, renderer.domElement, {
+        this.scene.add( points );
+        this.meshes.push( points );
+
+        const polys = new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({
+                vertexColors: THREE.VertexColors,
+                transparent: true,
+                opacity: 0.2
+
+            })
+        );
+
+        this.meshes.push( polys );
+        this.scene.add( polys );
+
+        const lines = new THREE.Mesh(
+            geometry,
+            new THREE.MeshBasicMaterial({
+                vertexColors: THREE.VertexColors,
+                wireframe: true
+            })
+        );
+
+        this.meshes.push( lines );
+        this.scene.add( lines );
+
+    }
+
+    initPlane(){
+
+        var camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 1000 );
+        camera.position.z = 20;
+        this.controls = new MapControls( camera, this.renderer.domElement, {
             target: new THREE.Plane(new THREE.Vector3(0,0,1), 0),
             minDistance: 2.0,
             maxDistance: 20
         });
 
-        window.addEventListener( 'resize', onWindowResize, false );
-        renderer.domElement.addEventListener( 'mousedown', pick);
-        renderer.domElement.addEventListener( 'dblclick', zoomTo );
+        var offset = 3;
+
+        for(var x = 0; x < this.dims; x++){
+            for(var y = 0; y < this.dims; y++){
+                var geometry = new THREE.CubeGeometry(1, 1, 1);
+                var material = new THREE.MeshNormalMaterial();
+
+                var mesh = new THREE.Mesh( geometry, material );
+                mesh.position.x += ((-0.5 * this.dims * offset) + (x * offset));
+                mesh.position.y += ((-0.5 * this.dims * offset) + (y * offset));
+
+                this.meshes.push( mesh );
+                this.scene.add( mesh );
+
+                mesh.geometry.computeBoundingSphere();
+            }
+        }
     }
 
-    function zoomTo(){
-        if(!selectedObject)
+    init () {
+        this.renderer = new THREE.WebGLRenderer();
+        this.renderer.setPixelRatio( window.devicePixelRatio );
+        this.renderer.setSize( window.innerWidth, window.innerHeight );
+
+        this.container.appendChild( this.renderer.domElement );
+
+        window.addEventListener( 'resize', ()=>{
+            this.onWindowResize();
+        }, false );
+        this.renderer.domElement.addEventListener( 'mousedown', (_e) => {this.pick(_e)} );
+        this.renderer.domElement.addEventListener( 'dblclick', (_e) => {this.zoomTo(_e)} );
+    }
+
+    zoomTo(){
+        if(!this.selectedObject)
             return;
 
-        controls.zoomToFit(selectedObject);
+        this.controls.zoomToFit(this.selectedObject);
     }
 
-    function pick(event){
+    pick(event){
         var mouse = new THREE.Vector2();
 
-        mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-        mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+        mouse.x = ( event.clientX / this.renderer.domElement.clientWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / this.renderer.domElement.clientHeight ) * 2 + 1;
 
         var raycaster = new THREE.Raycaster();
 
-        raycaster.setFromCamera(mouse, controls.camera);
+        raycaster.setFromCamera(mouse, this.controls.camera);
 
         // calculate objects intersecting the picking ray
-        var intersects = raycaster.intersectObjects( scene.children, true );
+        var intersects = raycaster.intersectObjects( this.scene.children, true );
         if(intersects.length > 0){
-            selectedObject = intersects[0].object;
+            this.selectedObject = intersects[0].object;
         }else{
-            selectedObject = null;
+            this.selectedObject = null;
         }
 
     }
 
-    function onWindowResize(){
-        renderer.setSize( window.innerWidth, window.innerHeight );
-        controls.camera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
-        controls.camera.updateProjectionMatrix();
-        renderer.setSize( renderer.domElement.clientWidth, renderer.domElement.clientHeight );
+    onWindowResize(){
+        this.renderer.setSize( window.innerWidth, window.innerHeight );
+        this.controls.camera.aspect = this.renderer.domElement.clientWidth / this.renderer.domElement.clientHeight;
+        this.controls.camera.updateProjectionMatrix();
+        this.renderer.setSize( this.renderer.domElement.clientWidth, this.renderer.domElement.clientHeight );
     }
 
-    function animate(){
-        requestAnimationFrame( animate );
+    animate(){
+        requestAnimationFrame( () => {
+            this.animate();
+        } );
 
-        _.each(meshes, function( mesh ){
-            mesh.rotation.x += 0.005;
-            mesh.rotation.y += 0.01;
-        });
-        controls.update();
-        renderer.render( scene, controls.camera );
+        if(this.mode == 'plane'){
+            this.meshes.forEach(( mesh ) => {
+                mesh.rotation.x += 0.005;
+                mesh.rotation.y += 0.01;
+            });
+        }
+
+        this.controls.update();
+        this.renderer.render( this.scene, this.controls.camera );
     }
 };
 
-window.onload = window.MapControlsDemo;
+window.addEventListener('load', () => {
+    window.demo = new MapControlsDemo('sphere');
+});

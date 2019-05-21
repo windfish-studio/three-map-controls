@@ -1,11 +1,10 @@
 'use strict';
 
-//Alex Pilafian 2016 - sikanrong@gmail.com
+//Alex Pilafian 2016-2019 - sikanrong@gmail.com
 
-import * as THREE from 'three'
-import _ from 'lodash'
+import {Matrix4, Matrix3, Quaternion, Plane, Sphere, EventDispatcher, Vector2, Vector3, Raycaster, Ray, MOUSE} from 'three'
 
-class MapControls extends THREE.EventDispatcher{
+class MapControls extends EventDispatcher{
 
         constructor(camera, domElement, options){
             super();
@@ -18,7 +17,7 @@ class MapControls extends THREE.EventDispatcher{
             // Set to false to disable this control (Disables all input events)
             this.enabled = true;
 
-            // Must be set to instance of THREE.Plane
+            // Must be set to instance of Plane or Sphere
             this.target;
 
             // How far you can dolly in and out
@@ -44,17 +43,31 @@ class MapControls extends THREE.EventDispatcher{
             this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
 
             // Mouse buttons
-            this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
+            this.mouseButtons = { ZOOM: MOUSE.MIDDLE, PAN: MOUSE.LEFT };
 
             //Copy options from parameters
-            _.extend(this, options);
+            Object.assign(this, options);
+
+            let isTargetValid = false;
+            [Plane, Sphere].forEach((_c) => {
+                if(this.target instanceof _c){
+                    isTargetValid = true;
+                }
+            });
+
+            if(!isTargetValid){
+                throw new Error('target must be an instance of type Plane or Sphere');
+            }
+
+            this._mode = (this.target instanceof Plane)? 'plane' : 'sphere';
+
 
             // for reset
             this.target0 = this.target.clone();
             this.position0 = this.camera.position.clone();
             this.zoom0 = this.camera.zoom;
 
-            this._mouse = new THREE.Vector2();
+            this._mouse = new Vector2();
 
             this._finalTargetDistance;
             this._currentTargetDistance;
@@ -66,22 +79,22 @@ class MapControls extends THREE.EventDispatcher{
             this._STATES = { NONE : - 1, DOLLY : 1, PAN : 2, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
             this._state = this._STATES.NONE;
 
-            this._panTarget = new THREE.Vector3();
-            this._panCurrent = new THREE.Vector3();
+            this._panTarget = new Vector3();
+            this._panCurrent = new Vector3();
 
-            this._minZoomPosition = new THREE.Vector3();
-            this._maxZoomPosition = new THREE.Vector3();
+            this._minZoomPosition = new Vector3();
+            this._maxZoomPosition = new Vector3();
 
-            this._panStart = new THREE.Vector2();
-            this._panEnd = new THREE.Vector2();
-            this._panDelta = new THREE.Vector2();
+            this._panStart = new Vector2();
+            this._panEnd = new Vector2();
+            this._panDelta = new Vector2();
 
-            this._dollyStart = new THREE.Vector2();
-            this._dollyEnd = new THREE.Vector2();
-            this._dollyDelta = new THREE.Vector2();
+            this._dollyStart = new Vector2();
+            this._dollyEnd = new Vector2();
+            this._dollyDelta = new Vector2();
 
-            this._camOrientation = new THREE.Vector2();
-            this._lastMouse = new THREE.Vector2();
+            this._camOrientation = new Vector2();
+            this._lastMouse = new Vector2();
 
             this._zoomAlpha;
 
@@ -123,14 +136,23 @@ class MapControls extends THREE.EventDispatcher{
         }
 
         _intersectCameraTarget(){
-            var intersection, ray;
-            _.each([-1, 1], function(orientation){
-                if(intersection)
-                    return;
+            let intersection, ray;
 
-                ray = new THREE.Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
-                intersection = ray.intersectPlane(this.target);
-            }.bind(this));
+            switch(this._mode){
+                case 'plane':
+                    [-1, 1].forEach((orientation) => {
+                        if(intersection)
+                            return;
+
+                        ray = new Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
+                        intersection = ray.intersectPlane(this.target);
+                    });
+                    break;
+                case 'sphere':
+                    ray = new Ray(this.camera.position, (new Vector3()).subVectors(this.target.center, this.camera.position));
+                    intersection = ray.intersectSphere(this.target);
+                    break;
+            }
 
             return {
                 intersection: intersection,
@@ -166,8 +188,8 @@ class MapControls extends THREE.EventDispatcher{
 
         // this method is exposed, but perhaps it would be better if we can make it private...
         update () {
-            var panDelta = new THREE.Vector3();
-            var oldPanCurrent = new THREE.Vector3();
+            var panDelta = new Vector3();
+            var oldPanCurrent = new Vector3();
             var position = this.camera.position;
 
             // move target to panned location
@@ -175,10 +197,33 @@ class MapControls extends THREE.EventDispatcher{
             this._panCurrent.lerp( this._panTarget, this.panDampingAlpha );
             panDelta.subVectors(this._panCurrent, oldPanCurrent);
 
-            this._maxZoomPosition.add(panDelta);
-            this._minZoomPosition.add(panDelta);
+            switch (this._mode) {
+                case 'plane':
+                    this._maxZoomPosition.add(panDelta);
+                    this._minZoomPosition.add(panDelta);
+                    break;
+                case 'sphere':
+                    const v = new Vector3();
+                    const quat = new Quaternion();
+
+                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 1 ), panDelta.x);
+
+                    this._maxZoomPosition.applyQuaternion(quat);
+                    this._minZoomPosition.applyQuaternion(quat);
+
+                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 0 ), panDelta.y);
+
+                    this._maxZoomPosition.applyQuaternion(quat);
+                    this._minZoomPosition.applyQuaternion(quat);
+
+                    break;
+            }
 
             position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this._updateZoomAlpha());
+
+            if(this._mode == 'sphere'){
+                this.camera.lookAt(this.target.center);
+            }
         }
 
         dispose () {
@@ -231,12 +276,19 @@ class MapControls extends THREE.EventDispatcher{
         }
 
         _updateDollyTrack(ray){
+            let intersect;
 
-            // calculate cameras intersecting the picking ray
-            var intersect = ray.intersectPlane(this.target);
+            switch(this._mode){
+                case 'plane':
+                    intersect = ray.intersectPlane(this.target);
+                    break;
+                case 'sphere':
+                    intersect = ray.intersectSphere(this.target);
+                    break;
+            }
 
             if(intersect){
-                this._maxZoomPosition.addVectors(intersect, new THREE.Vector3().subVectors(this.camera.position, intersect).normalize().multiplyScalar(this.minDistance));
+                this._maxZoomPosition.addVectors(intersect, new Vector3().subVectors(this.camera.position, intersect).normalize().multiplyScalar(this.minDistance));
                 this._minZoomPosition.copy(this._calculateMinZoom(this.camera.position, intersect));
 
                 this._finalTargetDistance = this._currentTargetDistance = intersect.clone().sub(this.camera.position).length();
@@ -249,23 +301,35 @@ class MapControls extends THREE.EventDispatcher{
 
 
         _panLeft( distance, cameraMatrix ) {
-            var v = new THREE.Vector3();
+            var v = new Vector3();
 
-            v.setFromMatrixColumn( cameraMatrix, 0 ); // get X column of cameraMatrix
-            v.multiplyScalar( - distance );
+            switch(this._mode){
+                case 'sphere':
+                    v.set(- distance, 0, 0);
+                    break;
+                case 'plane':
+                    v.setFromMatrixColumn( cameraMatrix, 0 ); // get Y column of cameraMatrix
+                    v.multiplyScalar( - distance );
+                    break;
+            }
 
             this._panTarget.add( v );
         }
 
         _panUp ( distance, cameraMatrix ) {
+            var v = new Vector3();
 
-            var v = new THREE.Vector3();
-
-            v.setFromMatrixColumn( cameraMatrix, 1 ); // get Y column of cameraMatrix
-            v.multiplyScalar( distance );
+            switch(this._mode){
+                case 'sphere':
+                    v.set(0, - distance, 0);
+                    break;
+                case 'plane':
+                    v.setFromMatrixColumn( cameraMatrix, 1 ); // get Y column of cameraMatrix
+                    v.multiplyScalar( distance );
+                    break;
+            }
 
             this._panTarget.add( v );
-
         }
 
         // deltaX and deltaY are in pixels; right and down are positive
@@ -273,8 +337,16 @@ class MapControls extends THREE.EventDispatcher{
 
             var element = this.domElement === document ? this.domElement.body : this.domElement;
 
-            var r = new THREE.Ray(this.camera.position, this._camOrientation);
-            var targetDistance = r.distanceToPlane(this.target);
+            var r = new Ray(this.camera.position, this._camOrientation);
+            var targetDistance;
+            switch(this._mode){
+                case 'plane':
+                    targetDistance = r.distanceToPlane(this.target);
+                    break;
+                case 'sphere':
+                    targetDistance = this.camera.position.distanceTo(this._maxZoomPosition);
+                    break;
+            }
 
             // half of the fov is center to top of screen
             targetDistance *= Math.tan( ( this.camera.fov / 2 ) * Math.PI / 180.0 );
@@ -312,7 +384,7 @@ class MapControls extends THREE.EventDispatcher{
             this._mouse.set(( event.offsetX / this.domElement.clientWidth ) * 2 - 1, - ( event.offsetY / this.domElement.clientHeight ) * 2 + 1);
 
             if(!prevMouse.equals(this._mouse)){
-                var rc = new THREE.Raycaster();
+                var rc = new Raycaster();
                 rc.setFromCamera(this._mouse, this.camera);
                 this._updateDollyTrack(rc.ray);
             }
@@ -442,11 +514,10 @@ class MapControls extends THREE.EventDispatcher{
                     break;
 
             }
-
         }
 
         _handleUpdateDollyTrackTouch( event ){
-            var centerpoint = new THREE.Vector2();
+            var centerpoint = new Vector2();
 
             var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
             var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
@@ -454,7 +525,7 @@ class MapControls extends THREE.EventDispatcher{
             centerpoint.x = event.touches[ 0 ].pageX + (dx / 2);
             centerpoint.y = event.touches[ 0 ].pageY + (dy / 2);
 
-            var mouse = new THREE.Vector2();
+            var mouse = new Vector2();
             mouse.x = ( centerpoint.x / domElement.clientWidth ) * 2 - 1;
             mouse.y = - ( centerpoint.y / domElement.clientHeight ) * 2 + 1;
 
@@ -716,5 +787,8 @@ class MapControls extends THREE.EventDispatcher{
 
 };
 
-THREE.MapControls = MapControls;
+if(window && window.THREE){
+    MapControls = MapControls;
+}
+
 export default MapControls;

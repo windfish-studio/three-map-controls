@@ -5,12 +5,23 @@
         <script src="dist/demo.js"></script>
       
         <style>
-          body{
-            margin: 0px;
-          }
+            body{
+                margin: 0px;
+            }
+
+            body a {
+                font-family: Arial;
+                position: fixed;
+                color: blue;
+                cursor: pointer;
+                text-decoration: underline;
+                display: none;
+            }
         </style>
       </head>
 
     <body>
+        <a id="sphere-link" onclick="window.demo.setMode('sphere')">Toggle Sphere Mode</a>
+        <a id="plane-link" onclick="window.demo.setMode('plane')">Toggle Plane Mode</a>
     </body>
 </html>

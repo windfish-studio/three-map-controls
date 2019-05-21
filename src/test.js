@@ -2,7 +2,6 @@
 
 var tape = require('tape');
 var THREE = require('three');
-var _ = require('lodash');
 var MapControls = require('../src/three-map-controls.js').default;
 
 console.log = function(value){
@@ -17,7 +16,7 @@ window.onload = function () {
     var camera = new THREE.PerspectiveCamera(45, el.clientWidth / el.clientHeight, 1, 1000);
 
     var inputEvents = {};
-    _.each([global.document, el], function(_el){
+    [global.document, el].forEach((_el) => {
         _el.addEventListener = function(key, listener){
             inputEvents[key] = listener;
         };
@@ -33,7 +32,7 @@ window.onload = function () {
     var controls;
 
     function advanceFrames(frames){
-        _.each(new Array(frames), function(){
+        (new Array(frames)).forEach(function(){
             controls.update();
         });
     };
@@ -49,7 +48,7 @@ window.onload = function () {
         this.preventDefault = stub;
         this.stopPropagation = stub;
 
-        return _.extend(this, data);
+        return Object.assign(this, data);
     };
 
     var mouse_x = 400;
@@ -121,7 +120,7 @@ window.onload = function () {
 
     tape('should stop zooming at minDistance from target plane', function (t) {
 
-        _.each(new Array(20), function(){
+        (new Array(20)).forEach(function(){
             inputEvents.mousewheel(new EventStub({wheelDelta: 1}));
         });
 
@@ -145,7 +144,7 @@ window.onload = function () {
         //this is where the camera should end up when all-the-way zoomed
         var max_zoom_pos = new THREE.Vector3().addVectors(intersect, new THREE.Vector3().subVectors(controls.camera.position, intersect).normalize().multiplyScalar(controls.minDistance));
 
-        _.each(new Array(30), function(){
+        (new Array(30)).forEach(function(){
             inputEvents.mousewheel(new EventStub({
                 wheelDelta: 1,
                 clientX: mouse_x,
