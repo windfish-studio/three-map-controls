@@ -48,6 +48,7 @@ class MapControlsDemo {
         const radius = 10;
         this.controls = new MapControls( camera, this.renderer.domElement, {
             target: new THREE.Sphere(new THREE.Vector3(0,0,0), radius),
+            mode: 'sphere',
             minDistance: 1,
             maxDistance: camera.position.z
         });
@@ -113,6 +114,7 @@ class MapControlsDemo {
         camera.position.z = 20;
         this.controls = new MapControls( camera, this.renderer.domElement, {
             target: new THREE.Plane(new THREE.Vector3(0,0,1), 0),
+            mode: 'plane',
             minDistance: 2.0,
             maxDistance: 20
         });

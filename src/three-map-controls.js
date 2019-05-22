@@ -47,20 +47,24 @@ class MapControls extends EventDispatcher{
 
             //Copy options from parameters
             Object.assign(this, options);
-
             let isTargetValid = false;
-            [Plane, Sphere].forEach((_c) => {
-                if(this.target instanceof _c){
-                    isTargetValid = true;
-                }
-            });
 
-            if(!isTargetValid){
-                throw new Error('target must be an instance of type Plane or Sphere');
+            if(this.mode === undefined){
+                throw new Error('\'mode\' option must be set to either \'plane\' or \'sphere\'');
             }
 
-            this._mode = (this.target instanceof Plane)? 'plane' : 'sphere';
+            switch(this.mode){
+                case 'plane':
+                    isTargetValid = (this.target.normal !== undefined && this.target.constant !== undefined);
+                    break;
+                case 'sphere':
+                    isTargetValid = (this.target.center !== undefined && this.target.radius !== undefined);
+                    break;
+            }
 
+            if(!isTargetValid){
+                throw new Error('\'target\' option must be an instance of type THREE.Plane or THREE.Sphere');
+            }
 
             // for reset
             this.target0 = this.target.clone();
@@ -138,7 +142,7 @@ class MapControls extends EventDispatcher{
         _intersectCameraTarget(){
             let intersection, ray;
 
-            switch(this._mode){
+            switch(this.mode){
                 case 'plane':
                     [-1, 1].forEach((orientation) => {
                         if(intersection)
@@ -197,7 +201,7 @@ class MapControls extends EventDispatcher{
             this._panCurrent.lerp( this._panTarget, this.panDampingAlpha );
             panDelta.subVectors(this._panCurrent, oldPanCurrent);
 
-            switch (this._mode) {
+            switch (this.mode) {
                 case 'plane':
                     this._maxZoomPosition.add(panDelta);
                     this._minZoomPosition.add(panDelta);
@@ -223,7 +227,7 @@ class MapControls extends EventDispatcher{
 
             position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this._updateZoomAlpha());
 
-            if(this._mode == 'sphere'){
+            if(this.mode == 'sphere'){
                 this.camera.lookAt(this.target.center);
             }
         }
@@ -280,7 +284,7 @@ class MapControls extends EventDispatcher{
         _updateDollyTrack(ray){
             let intersect;
 
-            switch(this._mode){
+            switch(this.mode){
                 case 'plane':
                     intersect = ray.intersectPlane(this.target);
                     break;
@@ -305,7 +309,7 @@ class MapControls extends EventDispatcher{
         _panLeft( distance, cameraMatrix ) {
             var v = new Vector3();
 
-            switch(this._mode){
+            switch(this.mode){
                 case 'sphere':
                     v.set(- distance, 0, 0);
                     break;
@@ -321,7 +325,7 @@ class MapControls extends EventDispatcher{
         _panUp ( distance, cameraMatrix ) {
             var v = new Vector3();
 
-            switch(this._mode){
+            switch(this.mode){
                 case 'sphere':
                     v.set(0, - distance, 0);
                     break;
@@ -341,7 +345,7 @@ class MapControls extends EventDispatcher{
 
             var r = new Ray(this.camera.position, this._camOrientation);
             var targetDistance;
-            switch(this._mode){
+            switch(this.mode){
                 case 'plane':
                     targetDistance = r.distanceToPlane(this.target);
                     break;
@@ -790,7 +794,7 @@ class MapControls extends EventDispatcher{
 };
 
 if(window && window.THREE){
-    MapControls = MapControls;
+    window.THREE.MapControls = MapControls;
 }
 
 export default MapControls;
