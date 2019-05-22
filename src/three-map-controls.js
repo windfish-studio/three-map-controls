@@ -206,12 +206,14 @@ class MapControls extends EventDispatcher{
                     const v = new Vector3();
                     const quat = new Quaternion();
 
-                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 1 ), panDelta.x);
+                    const r = this.target.radius;
+
+                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 1 ), (panDelta.x/r));
 
                     this._maxZoomPosition.applyQuaternion(quat);
                     this._minZoomPosition.applyQuaternion(quat);
 
-                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 0 ), panDelta.y);
+                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 0 ), (panDelta.y/r));
 
                     this._maxZoomPosition.applyQuaternion(quat);
                     this._minZoomPosition.applyQuaternion(quat);
