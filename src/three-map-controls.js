@@ -346,8 +346,7 @@ class MapControls extends EventDispatcher{
                     targetDistance = r.distanceToPlane(this.target);
                     break;
                 case 'sphere':
-                    const res = this._intersectCameraTarget();
-                    targetDistance = this.camera.position.distanceTo(res.intersection);
+                    targetDistance = this.camera.position.length() - this.target.radius;
                     break;
             }
 

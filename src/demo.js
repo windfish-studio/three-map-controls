@@ -44,12 +44,12 @@ class MapControlsDemo {
     initSphere(){
 
         var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
-        camera.position.z = 30;
+        camera.position.z = 40;
         const radius = 10;
         this.controls = new MapControls( camera, this.renderer.domElement, {
             target: new THREE.Sphere(new THREE.Vector3(0,0,0), radius),
             minDistance: 1,
-            maxDistance: 30
+            maxDistance: camera.position.z
         });
 
         const colors = [];
