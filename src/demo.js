@@ -148,8 +148,14 @@ class MapControlsDemo {
         window.addEventListener( 'resize', ()=>{
             this.onWindowResize();
         }, false );
+
         this.renderer.domElement.addEventListener( 'mousedown', (_e) => {this.pick(_e)} );
         this.renderer.domElement.addEventListener( 'dblclick', (_e) => {this.zoomTo(_e)} );
+
+        setInterval(()=>{
+            var bbox = this.controls.targetAreaVisible();
+            console.log(`(${bbox.min.x}, ${bbox.min.y}, ${bbox.max.x}, ${bbox.max.y})`);
+        }, 1000);
     }
 
     zoomTo(){

@@ -2,7 +2,7 @@
 
 //Alex Pilafian 2016-2019 - sikanrong@gmail.com
 
-import {Matrix4, Matrix3, Quaternion, Plane, Sphere, EventDispatcher, Vector2, Vector3, Raycaster, Ray, MOUSE} from 'three'
+import {Box2, Quaternion, EventDispatcher, Vector2, Vector3, Raycaster, Ray, MOUSE} from 'three'
 
 class MapControls extends EventDispatcher{
 
@@ -44,6 +44,8 @@ class MapControls extends EventDispatcher{
 
             // Mouse buttons
             this.mouseButtons = { ZOOM: MOUSE.MIDDLE, PAN: MOUSE.LEFT };
+
+            this.panLimits = new Box2();
 
             //Copy options from parameters
             Object.assign(this, options);
@@ -102,12 +104,21 @@ class MapControls extends EventDispatcher{
 
             this._zoomAlpha;
 
+            this._screenWorldXform = Math.tan( ( this.camera.fov / 2 ) * Math.PI / 180.0 );
+
             this._init();
         }
 
         _init (){
             if(this.target.distanceToPoint(this.camera.position) == 0){
                 throw new Error("ORIENTATION_UNKNOWABLE: initial Camera position cannot intersect target plane.");
+            }
+
+            if(this.mode == 'sphere'){
+                delete this.panLimits.min.x;
+                delete this.panLimits.max.x;
+                this.panLimits.min.y = -Math.PI/2;
+                this.panLimits.max.y = Math.PI/2;
             }
 
             //establish initial camera orientation based on position w.r.t. _this.target plane
@@ -210,14 +221,12 @@ class MapControls extends EventDispatcher{
                     const v = new Vector3();
                     const quat = new Quaternion();
 
-                    const r = this.target.radius;
-
-                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 1 ), (panDelta.x/r));
+                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 1 ), panDelta.x);
 
                     this._maxZoomPosition.applyQuaternion(quat);
                     this._minZoomPosition.applyQuaternion(quat);
 
-                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 0 ), (panDelta.y/r));
+                    quat.setFromAxisAngle(v.setFromMatrixColumn( this.camera.matrix, 0 ), panDelta.y);
 
                     this._maxZoomPosition.applyQuaternion(quat);
                     this._minZoomPosition.applyQuaternion(quat);
@@ -269,6 +278,42 @@ class MapControls extends EventDispatcher{
 
 
         };
+
+        //returns a bounding box denoting the visible target area
+        targetAreaVisible(){
+            let vOffset, hOffset, center;
+
+            switch(this.mode){
+                case 'plane':
+                    var r = new Ray(this.camera.position, this._camOrientation);
+                    var depth = r.distanceToPlane(this.target);
+
+                    center = this.camera.position.clone();
+
+                    vOffset = this._screenWorldXform * depth;
+                    hOffset = vOffset * this.camera.aspect;
+
+                    break;
+                case 'sphere':
+
+                    center = this._panCurrent.clone();
+
+                    const d = ((new Vector3()).subVectors(this.camera.position, this.target.center)).length();
+
+                    vOffset = this._screenWorldXform * ((d / this.target.radius) - 1);
+                    vOffset = Math.min(vOffset, (Math.PI / 2));
+
+                    hOffset = vOffset * this.camera.aspect;
+                    hOffset = Math.min(hOffset, Math.PI);
+
+                    break;
+            };
+
+            return new Box2(
+                new Vector2(center.x - hOffset, center.y - vOffset),
+                new Vector2(center.x + hOffset, center.y + vOffset)
+            );
+        }
 
         _updateZoomAlpha(){
             this._finalTargetDistance = Math.max( this.minDistance, Math.min( this.maxDistance, this._finalTargetDistance ) );
@@ -340,26 +385,37 @@ class MapControls extends EventDispatcher{
 
         // deltaX and deltaY are in pixels; right and down are positive
         _pan (deltaX, deltaY) {
-
             var element = this.domElement === document ? this.domElement.body : this.domElement;
 
             var r = new Ray(this.camera.position, this._camOrientation);
             var targetDistance;
+
             switch(this.mode){
                 case 'plane':
-                    targetDistance = r.distanceToPlane(this.target);
+                    targetDistance = this._screenWorldXform * r.distanceToPlane(this.target);
                     break;
                 case 'sphere':
-                    targetDistance = this.camera.position.length() - this.target.radius;
+                    //in spherical mode the pan coords are saved as radians and used as rotation angles
+                    const camToTarget = (new Vector3()).subVectors(this.camera.position, this.target.center);
+                    targetDistance = this._screenWorldXform * ((camToTarget.length() / this.target.radius) - 1);
                     break;
             }
-
-            // half of the fov is center to top of screen
-            targetDistance *= Math.tan( ( this.camera.fov / 2 ) * Math.PI / 180.0 );
 
             // we actually don't use screenWidth, since perspective camera is fixed to screen height
             this._panLeft( 2 * deltaX * targetDistance / element.clientHeight, this.camera.matrix );
             this._panUp( 2 * deltaY * targetDistance / element.clientHeight, this.camera.matrix );
+
+            //Apply limits
+            ['min', 'max'].forEach(_mm => {
+                const _rev = (_mm == 'min')? 'max' : 'min';
+
+                ['x', 'y'].forEach(_dim => {
+                    if(this.panLimits[_mm] && this.panLimits[_mm][_dim]){
+                        this._panTarget[_dim] = Math[_rev](this._panTarget[_dim], this.panLimits[_mm][_dim])
+                    }
+                })
+
+            });
 
         }
 
