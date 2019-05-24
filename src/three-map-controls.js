@@ -44,9 +44,7 @@ class MapControls extends EventDispatcher{
 
             // Mouse buttons
             this.mouseButtons = { ZOOM: MOUSE.MIDDLE, PAN: MOUSE.LEFT };
-
-            this.panLimits = new Box2();
-
+            
             //Copy options from parameters
             Object.assign(this, options);
             let isTargetValid = false;
@@ -112,13 +110,6 @@ class MapControls extends EventDispatcher{
         _init (){
             if(this.target.distanceToPoint(this.camera.position) == 0){
                 throw new Error("ORIENTATION_UNKNOWABLE: initial Camera position cannot intersect target plane.");
-            }
-
-            if(this.mode == 'sphere'){
-                delete this.panLimits.min.x;
-                delete this.panLimits.max.x;
-                this.panLimits.min.y = -Math.PI/2;
-                this.panLimits.max.y = Math.PI/2;
             }
 
             //establish initial camera orientation based on position w.r.t. _this.target plane
@@ -404,18 +395,6 @@ class MapControls extends EventDispatcher{
             // we actually don't use screenWidth, since perspective camera is fixed to screen height
             this._panLeft( 2 * deltaX * targetDistance / element.clientHeight, this.camera.matrix );
             this._panUp( 2 * deltaY * targetDistance / element.clientHeight, this.camera.matrix );
-
-            //Apply limits
-            ['min', 'max'].forEach(_mm => {
-                const _rev = (_mm == 'min')? 'max' : 'min';
-
-                ['x', 'y'].forEach(_dim => {
-                    if(this.panLimits[_mm] && this.panLimits[_mm][_dim]){
-                        this._panTarget[_dim] = Math[_rev](this._panTarget[_dim], this.panLimits[_mm][_dim])
-                    }
-                })
-
-            });
 
         }
 
