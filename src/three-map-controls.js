@@ -272,7 +272,8 @@ class MapControls extends EventDispatcher{
 
         //returns a bounding box denoting the visible target area
         targetAreaVisible(){
-            let vOffset, hOffset, center;
+
+            let bbox, vOffset, hOffset, center;
 
             switch(this.mode){
                 case 'plane':
@@ -284,26 +285,43 @@ class MapControls extends EventDispatcher{
                     vOffset = this._screenWorldXform * depth;
                     hOffset = vOffset * this.camera.aspect;
 
+                    bbox = new Box2(
+                        new Vector2(center.x - hOffset, center.y - vOffset),
+                        new Vector2(center.x + hOffset, center.y + vOffset)
+                    );
+
                     break;
                 case 'sphere':
 
-                    center = this._panCurrent.clone();
+                    const cameraOriginDist = ((new Vector3()).subVectors(this.target.center, this.camera.position));
+                    const halfPi = Math.PI / 2;
 
-                    const d = ((new Vector3()).subVectors(this.camera.position, this.target.center)).length();
+                    center = new Vector2(
+                        cameraOriginDist.angleTo(new Vector3(1,0,0)),
+                        cameraOriginDist.angleTo(new Vector3(0,1,0))
+                    );
+
+                    center.x = (this.camera.position.z < 0)? (2*Math.PI - center.x) : center.x;
+
+                    const d = cameraOriginDist.length();
 
                     vOffset = this._screenWorldXform * ((d / this.target.radius) - 1);
-                    vOffset = Math.min(vOffset, (Math.PI / 2));
+                    vOffset = Math.min(vOffset, halfPi);
 
                     hOffset = vOffset * this.camera.aspect;
-                    hOffset = Math.min(hOffset, Math.PI);
+                    hOffset = Math.min(hOffset, halfPi);
+
+                    bbox = new Box2(
+                        new Vector2(center.x - hOffset - halfPi, center.y - vOffset - halfPi),
+                        new Vector2(center.x + hOffset - halfPi, center.y + vOffset - halfPi)
+                    );
+
+                    bbox.max.x = (bbox.max.x > Math.PI)? (-2*Math.PI + bbox.max.x): bbox.max.x;
 
                     break;
             };
 
-            return new Box2(
-                new Vector2(center.x - hOffset, center.y - vOffset),
-                new Vector2(center.x + hOffset, center.y + vOffset)
-            );
+            return bbox;
         }
 
         _updateZoomAlpha(){
