@@ -293,17 +293,19 @@ class MapControls extends EventDispatcher{
                     break;
                 case 'sphere':
 
-                    const cameraOriginDist = ((new Vector3()).subVectors(this.target.center, this.camera.position));
+                    const cam_pos = ((new Vector3()).subVectors(this.target.center, this.camera.position));
+                    const cam_xpos = new Vector3(cam_pos.x, 0, cam_pos.z);
+
                     const halfPi = Math.PI / 2;
 
                     center = new Vector2(
-                        cameraOriginDist.angleTo(new Vector3(1,0,0)),
-                        cameraOriginDist.angleTo(new Vector3(0,1,0))
+                        cam_xpos.angleTo(new Vector3(1,0,0)),
+                        cam_pos.angleTo(new Vector3(0,1,0))
                     );
 
                     center.x = (this.camera.position.z < 0)? (2*Math.PI - center.x) : center.x;
 
-                    const d = cameraOriginDist.length();
+                    const d = cam_pos.length();
 
                     vOffset = this._screenWorldXform * ((d / this.target.radius) - 1);
                     vOffset = Math.min(vOffset, halfPi);
