@@ -316,7 +316,9 @@ class MapControls extends EventDispatcher{
                         new Vector2(center.x + hOffset - halfPi, center.y + vOffset - halfPi)
                     );
 
-                    bbox.max.x = (bbox.max.x > Math.PI)? (-2*Math.PI + bbox.max.x): bbox.max.x;
+                    ['min', 'max'].forEach(_mm => {
+                        bbox[_mm].x = (bbox[_mm].x > Math.PI)? (-2*Math.PI + bbox[_mm].x): bbox[_mm].x;
+                    });
 
                     break;
             };

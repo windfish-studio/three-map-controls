@@ -36,7 +36,6 @@
     "q": "1.4.1",
     "del": "2.2.2",
     "path": "0.12.7",
-    "resolve-file": "0.2.1",
-    "node.extend": "1.1.6"
+    "resolve-file": "0.2.1"
   }
 }
