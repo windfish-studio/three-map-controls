@@ -1,6 +1,8 @@
 var THREE = require('three');
 var MapControls = require('./three-map-controls.js').default || THREE.MapControls;
 
+const SPHERE_RADIUS = 10;
+
 class MapControlsDemo {
     constructor (mode) {
         this.container = document.body;
@@ -11,6 +13,11 @@ class MapControlsDemo {
         this.selectedObject = null;
         this.controls;
         this.mode;
+
+        this.debugCamViewInterval;
+
+        this.camViewMesh;
+        this.camViewLines;
 
         this.init();
         this.setMode(mode);
@@ -27,9 +34,16 @@ class MapControlsDemo {
         links[this.mode].style.display = 'none';
         links[(this.mode == 'plane')? 'sphere' : 'plane'].style.display = 'inline-block';
 
-        this.meshes.forEach((_m) => {
+        this.meshes.concat([this.camViewLines, this.camViewMesh]).forEach((_m) => {
+            if(_m === undefined){
+                return;
+            }
+
             this.scene.remove(_m);
+            _m.geometry.dispose();
         });
+
+        this.camViewLines = this.camViewMesh = undefined;
 
         switch(this.mode){
             case 'sphere':
@@ -45,9 +59,8 @@ class MapControlsDemo {
 
         var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
         camera.position.z = 40;
-        const radius = 10;
         this.controls = new MapControls( camera, this.renderer.domElement, {
-            target: new THREE.Sphere(new THREE.Vector3(0,0,0), radius),
+            target: new THREE.Sphere(new THREE.Vector3(0,0,0), SPHERE_RADIUS),
             mode: 'sphere',
             minDistance: 1,
             maxDistance: camera.position.z
@@ -55,7 +68,7 @@ class MapControlsDemo {
 
         const colors = [];
 
-        const geometry = new THREE.SphereBufferGeometry(radius, this.dims, this.dims);
+        const geometry = new THREE.SphereBufferGeometry(SPHERE_RADIUS, this.dims, this.dims);
         geometry.computeBoundingSphere();
 
         const vertices = geometry.getAttribute('position').array;
@@ -64,9 +77,9 @@ class MapControlsDemo {
             var vert = new THREE.Vector3(vertices[i], vertices[i+1], vertices[i+2]);
 
             color.setRGB(
-                ( vert.x / radius ) + 0.5,
-                ( vert.y / radius ) + 0.5,
-                ( vert.z / radius ) + 0.5
+                ( vert.x / SPHERE_RADIUS ) + 0.5,
+                ( vert.y / SPHERE_RADIUS ) + 0.5,
+                ( vert.z / SPHERE_RADIUS ) + 0.5
             );
 
             colors.push( color.r, color.g, color.b );
@@ -106,6 +119,86 @@ class MapControlsDemo {
         this.meshes.push( lines );
         this.scene.add( lines );
 
+    }
+
+    toggleDebugCamView(e){
+        if(!e.target.checked){
+            clearInterval(this.debugCamViewInterval);
+            this.scene.remove( this.camViewMesh );
+            this.scene.remove( this.camViewLines );
+            this.camViewMesh.geometry.dispose();
+            this.camViewLines.geometry.dispose();
+            this.camViewLines = this.camViewMesh = undefined;
+            return true;
+        }
+
+        this.debugCamViewInterval = setInterval(() => {
+            const bbox = this.controls.targetAreaVisible();
+            console.log(`${bbox.min.x}, ${bbox.min.y}, ${bbox.max.x}, ${bbox.max.y}`);
+
+            let geometry, position;
+            position = new THREE.Vector3(0,0,0);
+
+            switch (this.mode) {
+                case 'sphere':
+                    geometry = new THREE.SphereBufferGeometry(SPHERE_RADIUS, this.dims, this.dims,
+                        bbox.min.x + Math.PI/2, //phistart
+                        Math.abs(bbox.max.x - bbox.min.x), //philength
+                        -bbox.max.y + Math.PI/2, //thetastart
+                        Math.abs(bbox.max.y - bbox.min.y) //thetalength
+                    );
+                    break;
+                case 'plane':
+
+                    geometry = new THREE.PlaneBufferGeometry(
+                        (bbox.max.x - bbox.min.x),
+                        (bbox.max.y - bbox.min.y),
+                        this.dims, this.dims
+                    );
+
+                    position.copy(this.controls.camera.position);
+                    position.z = 0;
+
+                    break;
+            }
+
+            if(this.camViewMesh == undefined){
+                this.camViewMesh = new THREE.Mesh(
+                    geometry,
+                    new THREE.MeshBasicMaterial({
+                        color: new THREE.Color(255, 0, 0),
+                        side: THREE.DoubleSide,
+                        transparent: true,
+                        opacity: 0.5
+                    })
+                );
+
+                this.camViewLines = new THREE.Mesh(
+                    geometry,
+                    new THREE.MeshBasicMaterial({
+                        color: new THREE.Color(255, 0, 0),
+                        wireframe: true
+                    })
+                );
+
+                this.scene.add( this.camViewMesh );
+                this.scene.add( this.camViewLines );
+            }else{
+
+                this.camViewMesh.geometry.attributes['position'] = geometry.getAttribute('position');
+                this.camViewMesh.geometry.attributes['position'].needsUpdate = true;
+
+                this.camViewLines.geometry.attributes['position'] = geometry.getAttribute('position');
+                this.camViewLines.geometry.attributes['position'].needsUpdate = true;
+
+                geometry.dispose();
+            }
+
+            this.camViewMesh.geometry.computeBoundingSphere();
+            this.camViewMesh.position.copy(position);
+            this.camViewLines.position.copy(position);
+
+        }, 1000);
     }
 
     initPlane(){
@@ -151,10 +244,9 @@ class MapControlsDemo {
 
         this.renderer.domElement.addEventListener( 'mousedown', (_e) => {this.pick(_e)} );
         this.renderer.domElement.addEventListener( 'dblclick', (_e) => {this.zoomTo(_e)} );
-        // setInterval(() => {
-        //     const bbox = this.controls.targetAreaVisible();
-        //     console.log(`${bbox.min.x}, ${bbox.min.y}, ${bbox.max.x}, ${bbox.max.y}`);
-        // }, 500);
+
+        const cb = document.getElementById('toggleCamDebug');
+        cb.addEventListener('click', this.toggleDebugCamView.bind(this));
     }
 
     zoomTo(){

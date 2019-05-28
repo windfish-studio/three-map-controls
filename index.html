@@ -9,19 +9,24 @@
                 margin: 0px;
             }
 
-            body a {
+            div#controls {
                 font-family: Arial;
                 position: fixed;
-                color: blue;
+                color: white;
                 cursor: pointer;
-                text-decoration: underline;
-                display: none;
             }
         </style>
       </head>
 
     <body>
-        <a id="sphere-link" onclick="window.demo.setMode('sphere')">Toggle Sphere Mode</a>
-        <a id="plane-link" onclick="window.demo.setMode('plane')">Toggle Plane Mode</a>
+        <div id="controls">
+            <a id="sphere-link" onclick="window.demo.setMode('sphere')">Toggle Sphere Mode</a>
+            <a id="plane-link" onclick="window.demo.setMode('plane')">Toggle Plane Mode</a>
+            <br />
+            <label>
+                Render Camera-View Bounding Box:
+                <input type="checkbox" id="toggleCamDebug" />
+            </label>
+        </div>
     </body>
 </html>
