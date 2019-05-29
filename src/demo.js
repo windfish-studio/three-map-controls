@@ -141,9 +141,13 @@ class MapControlsDemo {
 
             switch (this.mode) {
                 case 'sphere':
+                    let phidelta = Math.abs(bbox.max.x - bbox.min.x);
+                    if(phidelta > Math.PI){
+                        phidelta = Math.abs((bbox.max.x + Math.PI*2) - bbox.min.x);
+                    }
                     geometry = new THREE.SphereBufferGeometry(SPHERE_RADIUS, this.dims, this.dims,
                         bbox.min.x + Math.PI/2, //phistart
-                        Math.abs(bbox.max.x - bbox.min.x), //philength
+                        phidelta, //philength
                         -bbox.max.y + Math.PI/2, //thetastart
                         Math.abs(bbox.max.y - bbox.min.y) //thetalength
                     );
