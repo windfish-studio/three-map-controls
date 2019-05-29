@@ -185,11 +185,8 @@ class MapControlsDemo {
                 this.scene.add( this.camViewLines );
             }else{
 
-                this.camViewMesh.geometry.attributes['position'] = geometry.getAttribute('position');
-                this.camViewMesh.geometry.attributes['position'].needsUpdate = true;
-
-                this.camViewLines.geometry.attributes['position'] = geometry.getAttribute('position');
-                this.camViewLines.geometry.attributes['position'].needsUpdate = true;
+                this.camViewMesh.geometry.copy(geometry);
+                this.camViewLines.geometry.copy(geometry);
 
                 geometry.dispose();
             }

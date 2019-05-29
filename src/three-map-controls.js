@@ -277,8 +277,8 @@ class MapControls extends EventDispatcher{
 
             switch(this.mode){
                 case 'plane':
-                    var r = new Ray(this.camera.position, this._camOrientation);
-                    var depth = r.distanceToPlane(this.target);
+                    var ray = new Ray(this.camera.position, this._camOrientation);
+                    var depth = ray.distanceToPlane(this.target);
 
                     center = this.camera.position.clone();
 
@@ -307,10 +307,14 @@ class MapControls extends EventDispatcher{
 
                     const d = cam_pos.length();
 
+                    //Derived from solving the Haversine formula for Phi_2 when all other variables
+                    //(d, r, Theta_1, Theta_2, Phi_1) are given
                     vOffset = this._screenWorldXform * ((d / this.target.radius) - 1);
                     vOffset = Math.min(vOffset, halfPi);
 
-                    hOffset = vOffset * this.camera.aspect;
+                    //Account for the aspect ratio of the screen, and the deformation of the sphere
+                    const r = this.target.radius * Math.cos(center.y - halfPi);
+                    hOffset = vOffset * this.camera.aspect * ( this.target.radius / r);
                     hOffset = Math.min(hOffset, halfPi);
 
                     bbox = new Box2(
