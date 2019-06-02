@@ -225,6 +225,53 @@ test('initialZoom parameter should set the default cam position correctly', func
 
 test('pan calibration should hold true when zoomed in', function(t){
     controls.reset();
+    controls.camera.updateWorldMatrix();
     testPanCalibration(t, 400, 500);
 });
 
+test('sphere camera should return correct targetVisibleArea', function (t) {
+    controls.dispose();
+    controls = undefined;
+
+    camera.position.set(0,0,100);
+    camera.lookAt(new THREE.Vector3(0,0,0));
+    camera.updateWorldMatrix();
+    controls = new MapControls( camera, window.document.body, {
+        target: new THREE.Sphere(new THREE.Vector3(0,0,0), 10),
+        mode: 'sphere',
+        minDistance: 2,
+        maxDistance: 100
+    });
+
+    const bbox = controls.targetAreaVisible();
+    const bbox_ar = Array.prototype.concat.apply([], [bbox.min, bbox.max].map(_v => {return _v.toArray()}));
+    t.deepEqual(
+        bbox_ar,
+        [-Math.PI/2, -Math.PI/2, Math.PI/2, Math.PI/2]
+    );
+});
+
+test('sphere camera should return correct targetVisibleArea on zoom', function (t) {
+
+    (Array.apply(null, Array(20))).forEach(function(){
+        inputEvents.mousewheel(new EventStub({
+            wheelDelta: 1,
+            offsetX: window.document.body.clientWidth / 2,
+            offsetY: window.document.body.clientHeight / 2
+        }));
+    });
+
+    advanceFrames(1000);
+
+    const bbox = controls.targetAreaVisible();
+    const bbox_ar = Array.prototype.concat.apply([], [bbox.min, bbox.max].map(_v => {return _v.toArray()}));
+    t.deepEqual(
+        bbox_ar,
+        [
+            -0.14727593328821142,
+            -0.08284271247461894,
+            0.14727593328821142,
+            0.08284271247461894
+        ]
+    );
+});

@@ -125,7 +125,7 @@ class MapControls extends EventDispatcher{
             this._finalTargetDistance = this._currentTargetDistance = Math.abs(this.target.distanceToPoint(this.camera.position));
 
             this.camera.lookAt(this._maxZoomPosition); //set the orientation of the camera towards the map.
-            this._camOrientation = this._intersectCameraTarget().ray.direction.clone();
+            this._camOrientation = this._intersectCameraTarget().ray.direction.clone().normalize();
 
             this._updateZoomAlpha();
 
@@ -157,12 +157,12 @@ class MapControls extends EventDispatcher{
                         if(intersection && intersection.length() > 0)
                             return;
 
-                        ray = new Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
+                        ray = new Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation).normalize());
                         ray.intersectPlane(this.target, intersection);
                     });
                     break;
                 case 'sphere':
-                    ray = new Ray(this.camera.position, (new Vector3()).subVectors(this.target.center, this.camera.position));
+                    ray = new Ray(this.camera.position, (new Vector3()).subVectors(this.target.center, this.camera.position).normalize());
                     ray.intersectSphere(this.target, intersection);
                     break;
             }
