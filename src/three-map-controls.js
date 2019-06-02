@@ -4,6 +4,11 @@
 
 import {Box2, Quaternion, EventDispatcher, Vector2, Vector3, Raycaster, Ray, MOUSE} from 'three'
 
+//test stubs
+if(typeof window == 'undefined'){
+    let window = require('../test/stub_dom');
+}
+
 class MapControls extends EventDispatcher{
 
         constructor(camera, domElement, options){
@@ -12,7 +17,7 @@ class MapControls extends EventDispatcher{
             this.camera = camera;
 
             //Object to use for listening for keyboard/mouse events
-            this.domElement = ( domElement !== undefined ) ? domElement : document;
+            this.domElement = ( domElement !== undefined ) ? domElement : window.document;
 
             // Set to false to disable this control (Disables all input events)
             this.enabled = true;
@@ -71,17 +76,27 @@ class MapControls extends EventDispatcher{
             this.position0 = this.camera.position.clone();
             this.zoom0 = this.camera.zoom;
 
-            this._mouse = new Vector2();
-
-            this._finalTargetDistance;
-            this._currentTargetDistance;
-
             this._changeEvent = { type: 'change' };
             this._startEvent = { type: 'start' };
             this._endEvent = { type: 'end' };
 
             this._STATES = { NONE : - 1, DOLLY : 1, PAN : 2, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
+
+
+            this._init();
+        }
+
+        _init (){
+            if(this.target.distanceToPoint(this.camera.position) == 0){
+                throw new Error("ORIENTATION_UNKNOWABLE: initial Camera position cannot intersect target plane.");
+            }
+
             this._state = this._STATES.NONE;
+
+            this._mouse = new Vector2();
+
+            this._finalTargetDistance;
+            this._currentTargetDistance;
 
             this._panTarget = new Vector3();
             this._panCurrent = new Vector3();
@@ -98,19 +113,10 @@ class MapControls extends EventDispatcher{
             this._dollyDelta = new Vector2();
 
             this._camOrientation = new Vector2();
-            this._lastMouse = new Vector2();
 
             this._zoomAlpha;
 
             this._screenWorldXform = Math.tan( ( this.camera.fov / 2 ) * Math.PI / 180.0 );
-
-            this._init();
-        }
-
-        _init (){
-            if(this.target.distanceToPoint(this.camera.position) == 0){
-                throw new Error("ORIENTATION_UNKNOWABLE: initial Camera position cannot intersect target plane.");
-            }
 
             //establish initial camera orientation based on position w.r.t. _this.target plane
             this._straightDollyTrack();
@@ -119,7 +125,7 @@ class MapControls extends EventDispatcher{
             this._finalTargetDistance = this._currentTargetDistance = Math.abs(this.target.distanceToPoint(this.camera.position));
 
             this.camera.lookAt(this._maxZoomPosition); //set the orientation of the camera towards the map.
-            this._camOrientation = this._maxZoomPosition.clone().sub(this.camera.position).normalize();
+            this._camOrientation = this._intersectCameraTarget().ray.direction.clone();
 
             this._updateZoomAlpha();
 
@@ -142,21 +148,22 @@ class MapControls extends EventDispatcher{
         }
 
         _intersectCameraTarget(){
-            let intersection, ray;
+            let intersection = new Vector3();
+            let ray;
 
             switch(this.mode){
                 case 'plane':
                     [-1, 1].forEach((orientation) => {
-                        if(intersection)
+                        if(intersection && intersection.length() > 0)
                             return;
 
                         ray = new Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation));
-                        intersection = ray.intersectPlane(this.target);
+                        ray.intersectPlane(this.target, intersection);
                     });
                     break;
                 case 'sphere':
                     ray = new Ray(this.camera.position, (new Vector3()).subVectors(this.target.center, this.camera.position));
-                    intersection = ray.intersectSphere(this.target);
+                    ray.intersectSphere(this.target, intersection);
                     break;
             }
 
@@ -242,8 +249,8 @@ class MapControls extends EventDispatcher{
             this.domElement.removeEventListener( 'touchend', this._onTouchEnd, false );
             this.domElement.removeEventListener( 'touchmove', this._onTouchMove, false );
 
-            document.removeEventListener( 'mousemove', this._onMouseMove, false );
-            document.removeEventListener( 'mouseup', this._onMouseUp, false );
+            window.document.removeEventListener( 'mousemove', this._onMouseMove, false );
+            window.document.removeEventListener( 'mouseup', this._onMouseUp, false );
 
             this.domElement.removeEventListener( 'keydown', this._onKeyDown, false );
         };
@@ -344,14 +351,14 @@ class MapControls extends EventDispatcher{
         }
 
         _updateDollyTrack(ray){
-            let intersect;
+            let intersect = new Vector3();
 
             switch(this.mode){
                 case 'plane':
-                    intersect = ray.intersectPlane(this.target);
+                    ray.intersectPlane(this.target, intersect);
                     break;
                 case 'sphere':
-                    intersect = ray.intersectSphere(this.target);
+                    ray.intersectSphere(this.target, intersect);
                     break;
             }
 
@@ -402,7 +409,7 @@ class MapControls extends EventDispatcher{
 
         // deltaX and deltaY are in pixels; right and down are positive
         _pan (deltaX, deltaY) {
-            var element = this.domElement === document ? this.domElement.body : this.domElement;
+            var element = this.domElement === window.document ? this.domElement.body : this.domElement;
 
             var r = new Ray(this.camera.position, this._camOrientation);
             var targetDistance;
@@ -698,8 +705,8 @@ class MapControls extends EventDispatcher{
 
             if ( this._state !== this._STATES.NONE ) {
 
-                document.addEventListener( 'mousemove', this._onMouseMove.bind(this), false );
-                document.addEventListener( 'mouseup', this._onMouseUp.bind(this), false );
+                window.document.addEventListener( 'mousemove', this._onMouseMove.bind(this), false );
+                window.document.addEventListener( 'mouseup', this._onMouseUp.bind(this), false );
 
                 this.dispatchEvent( this._startEvent );
 
@@ -733,8 +740,8 @@ class MapControls extends EventDispatcher{
 
             this._handleMouseUp( event );
 
-            document.removeEventListener( 'mousemove', this._onMouseMove, false );
-            document.removeEventListener( 'mouseup', this._onMouseUp, false );
+            window.document.removeEventListener( 'mousemove', this._onMouseMove, false );
+            window.document.removeEventListener( 'mouseup', this._onMouseUp, false );
 
             this.dispatchEvent( this._endEvent );
 
@@ -853,9 +860,5 @@ class MapControls extends EventDispatcher{
         }
 
 };
-
-if(window && window.THREE){
-    window.THREE.MapControls = MapControls;
-}
 
 export default MapControls;
