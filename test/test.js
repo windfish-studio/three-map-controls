@@ -24,7 +24,6 @@ const addEventListenerStub = (key, listener) => {
     inputEvents[key] = listener;
 };
 
-window.document.addEventListener = addEventListenerStub;
 window.document.body.addEventListener = addEventListenerStub;
 
 const defaultOpts = {
@@ -330,7 +329,7 @@ test('sphere camera should maintain distance from sphere as it rotates around', 
     }));
 
     inputEvents.mouseup();
-    
+
     advanceFrames(1000);
     
     t.is(fastRound(currentDistance()), fastRound(controls.minDistance));

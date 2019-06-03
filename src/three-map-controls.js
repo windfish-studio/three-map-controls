@@ -17,7 +17,7 @@ class MapControls extends EventDispatcher{
             this.camera = camera;
 
             //Object to use for listening for keyboard/mouse events
-            this.domElement = ( domElement !== undefined ) ? domElement : window.document;
+            this.domElement = ( domElement !== undefined ) ? domElement : window.document.body;
 
             // Set to false to disable this control (Disables all input events)
             this.enabled = true;
@@ -247,8 +247,8 @@ class MapControls extends EventDispatcher{
             this.domElement.removeEventListener( 'touchend', this._onTouchEnd, false );
             this.domElement.removeEventListener( 'touchmove', this._onTouchMove, false );
 
-            window.document.removeEventListener( 'mousemove', this._onMouseMove, false );
-            window.document.removeEventListener( 'mouseup', this._onMouseUp, false );
+            this.domElement.removeEventListener( 'mousemove', this._onMouseMove, false );
+            this.domElement.removeEventListener( 'mouseup', this._onMouseUp, false );
 
             this.domElement.removeEventListener( 'keydown', this._onKeyDown, false );
         };
@@ -407,7 +407,7 @@ class MapControls extends EventDispatcher{
 
         // deltaX and deltaY are in pixels; right and down are positive
         _pan (deltaX, deltaY) {
-            var element = this.domElement === window.document ? this.domElement.body : this.domElement;
+            var element = this.domElement;
 
             var r = new Ray(this.camera.position, this._camOrientation);
             var targetDistance;
@@ -703,8 +703,8 @@ class MapControls extends EventDispatcher{
 
             if ( this._state !== this._STATES.NONE ) {
 
-                window.document.addEventListener( 'mousemove', this._onMouseMove.bind(this), false );
-                window.document.addEventListener( 'mouseup', this._onMouseUp.bind(this), false );
+                this.domElement.addEventListener( 'mousemove', this._onMouseMove.bind(this), false );
+                this.domElement.addEventListener( 'mouseup', this._onMouseUp.bind(this), false );
 
                 this.dispatchEvent( this._startEvent );
 
@@ -738,8 +738,8 @@ class MapControls extends EventDispatcher{
 
             this._handleMouseUp( event );
 
-            window.document.removeEventListener( 'mousemove', this._onMouseMove, false );
-            window.document.removeEventListener( 'mouseup', this._onMouseUp, false );
+            this.domElement.removeEventListener( 'mousemove', this._onMouseMove, false );
+            this.domElement.removeEventListener( 'mouseup', this._onMouseUp, false );
 
             this.dispatchEvent( this._endEvent );
 
