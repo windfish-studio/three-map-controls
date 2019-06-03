@@ -1,6 +1,13 @@
 'use strict';
 import test from 'ava';
-import * as THREE from 'three';
+import {
+    Plane,
+    Sphere,
+    Raycaster,
+    Vector3,
+    Vector2,
+    PerspectiveCamera
+} from 'three';
 import MapControls from '../src/three-map-controls.js';
 
 //test stubs
@@ -9,7 +16,7 @@ if(typeof window == 'undefined'){
 }
 
 const aspect = window.document.body.clientWidth / window.document.body.clientHeight;
-const camera = new THREE.PerspectiveCamera(45, aspect, 1, 1000);
+const camera = new PerspectiveCamera(45, aspect, 1, 1000);
 
 global.inputEvents = {};
 
@@ -21,7 +28,7 @@ window.document.addEventListener = addEventListenerStub;
 window.document.body.addEventListener = addEventListenerStub;
 
 const defaultOpts = {
-    target: new THREE.Plane(new THREE.Vector3(0,0,1), 0),
+    target: new Plane(new Vector3(0,0,1), 0),
     mode: 'plane',
     minDistance: 2.0,
     maxDistance: 20
@@ -56,10 +63,14 @@ const fastRound = (_n) => {
     return (Math.round(_n*p)/p);
 };
 
+const screenCenter = new Vector2(
+    window.document.body.clientWidth / 2,
+    window.document.body.clientHeight / 2
+);
 
-var initial_cam_pos = new THREE.Vector3(3,2,-20); //what it should be, used for comparisons
+var initial_cam_pos = new Vector3(3,2,-20); //what it should be, used for comparisons
 
-test("shouldn't allow initialization if camera intersects plane", function (t) {
+test("shouldn't allow initialization if camera intersects plane", (t) => {
     try{
         controls = new MapControls( camera, window.document.body, defaultOpts );
         t.fail('controls created where camera intersects target plane');
@@ -81,7 +92,7 @@ test("shouldn't allow initialization if camera intersects plane", function (t) {
 
 });
 
-test('should correctly determine the camera orientation to the target plane', function (t) {
+test('should correctly determine the camera orientation to the target plane', (t) => {
     t.deepEqual(controls._camOrientation.toArray(), [0,0,-1]);
     camera.position.z = -1;
     controls = new MapControls( camera, window.document.body, defaultOpts );
@@ -104,13 +115,13 @@ test("shouldn't move from initial position if no input received", function(t){
 });
 
 test("should automatically orient camera towards plane based on starting position", function(t){
-    var cam_vec = new THREE.Vector3();
+    var cam_vec = new Vector3();
     camera.getWorldDirection(cam_vec);
-    t.truthy(cam_vec.equals(controls.target.normal) || cam_vec.multiplyScalar(-1).equals(controls.target.normal));
+    t.truthy(cam_vec.equals(controls.target.normal));
     
 });
 
-test('should lerp camera towards target plane on mousewheel', function (t) {
+test('should lerp camera towards target plane on mousewheel', (t) => {
     var lastDistance = currentDistance();
     inputEvents.mousewheel(new EventStub({wheelDelta: 1}));
     advanceFrames(1000);
@@ -120,7 +131,7 @@ test('should lerp camera towards target plane on mousewheel', function (t) {
     
 });
 
-test('should stop zooming at minDistance from target plane', function (t) {
+test('should stop zooming at minDistance from target plane', (t) => {
     controls.reset();
     (Array.apply(null, Array(20))).forEach(function(){
         inputEvents.mousewheel(new EventStub({
@@ -156,66 +167,80 @@ test('should zoom into mouse pointer', function(t){ //e.g. should act like maps 
     advanceFrames(1000);
     var tolerance = Math.pow(10, -sigfigs);
 
-    const desired = new THREE.Vector3(
+    const desired = new Vector3(
         10.812787997105476,
         5.34833686125601,
         -1.8118972640060278
     );
 
-    var delta = Math.abs(new THREE.Vector3().subVectors(desired, controls.camera.position).length());
+    var delta = Math.abs(new Vector3().subVectors(desired, controls.camera.position).length());
 
     t.truthy( delta <= tolerance );
     
 });
 
 
-var testPanCalibration = function(t, new_x, new_y){
+var testPanCalibration = function(t, move, tol){
+
+    move = move || new Vector2(10, 10);
 
     const intersectMouse = function(x, y){
-        var mouse_pos = new THREE.Vector2(
+        var mouse_pos = new Vector2(
             ( x / window.document.body.clientWidth ) * 2 - 1,
             - ( y / window.document.body.clientHeight ) * 2 + 1); //NDC
 
-        const raycaster = new THREE.Raycaster();
+        const raycaster = new Raycaster();
         raycaster.setFromCamera(mouse_pos, controls.camera);
 
-        var intersection = new THREE.Vector3();
-        raycaster.ray.intersectPlane(controls.target, intersection);
+        const intersection = new Vector3();
+
+        switch(controls.mode){
+            case 'plane':
+                raycaster.ray.intersectPlane(controls.target, intersection);
+                break;
+            case 'sphere':
+                raycaster.ray.intersectSphere(controls.target, intersection);
+                break;
+        }
+
         return intersection;
     };
 
-    const mouse_x = 400, mouse_y = 300;
+
     //push mouse button down..
     inputEvents.mousedown(new EventStub({
-        offsetX: mouse_x,
-        offsetY: mouse_y,
+        offsetX: screenCenter.x,
+        offsetY: screenCenter.y,
         button: controls.mouseButtons.PAN
     }));
 
     var first_campos = controls.camera.position.clone();
-    var first_intersect = intersectMouse(mouse_x, mouse_y);
+    var first_intersect = intersectMouse(screenCenter.x, screenCenter.y);
+
+    const newMouse = screenCenter.clone().add(move);
 
     inputEvents.mousemove(new EventStub({
-        offsetX: new_x,
-        offsetY: new_y
+        offsetX: newMouse.x,
+        offsetY: newMouse.y
     }));
 
     advanceFrames(1000);
 
     var second_campos = controls.camera.position.clone();
-    var second_intersect = intersectMouse(new_x, new_y);
+    var second_intersect = intersectMouse(newMouse.x, newMouse.y);
 
     //second_intersect should be the same as first_intersect; e.g. the point in world-space under the mouse should not
     //have changed during pan operation
-    var tolerance = 0.0001;
-    const delta = Math.abs(new THREE.Vector3().subVectors(second_intersect, first_intersect).length());
-    t.truthy(delta <= tolerance);
+    const delta = Math.abs(new Vector3().subVectors(second_intersect, first_intersect).length());
+    t.truthy(delta <= (tol || 0.0001));
     t.notDeepEqual(first_campos.toArray(), second_campos.toArray());
+
+    inputEvents.mouseup();
 };
 
 test('mouse should keep same world coordinates under it during camera pan (pan calibration)', function(t){
     controls.reset();
-    testPanCalibration(t, 400, 500);
+    testPanCalibration(t);
 });
 
 
@@ -238,18 +263,18 @@ test('initialZoom parameter should set the default cam position correctly', func
 test('pan calibration should hold true when zoomed in', function(t){
     controls.reset();
     controls.camera.updateWorldMatrix();
-    testPanCalibration(t, 400, 500);
+    testPanCalibration(t);
 });
 
-test('sphere camera should return correct targetVisibleArea', function (t) {
+test('sphere camera should return correct targetVisibleArea', (t) => {
     controls.dispose();
     controls = undefined;
 
     camera.position.set(0,0,100);
-    camera.lookAt(new THREE.Vector3(0,0,0));
+    camera.lookAt(new Vector3(0,0,0));
     camera.updateWorldMatrix();
     controls = new MapControls( camera, window.document.body, {
-        target: new THREE.Sphere(new THREE.Vector3(0,0,0), 10),
+        target: new Sphere(new Vector3(0,0,0), 10),
         mode: 'sphere',
         minDistance: 2,
         maxDistance: 100
@@ -263,7 +288,7 @@ test('sphere camera should return correct targetVisibleArea', function (t) {
     );
 });
 
-test('sphere camera should return correct targetVisibleArea on zoom', function (t) {
+test('sphere camera should return correct targetVisibleArea on zoom', (t) => {
 
     (Array.apply(null, Array(20))).forEach(function(){
         inputEvents.mousewheel(new EventStub({
@@ -286,4 +311,48 @@ test('sphere camera should return correct targetVisibleArea on zoom', function (
             0.08284271247461894
         ]
     );
+});
+
+test('sphere camera should maintain distance from sphere as it rotates around', (t) => {
+
+    t.is(currentDistance(), controls.minDistance);
+    const first_campos = controls.camera.position.clone();
+
+    inputEvents.mousedown(new EventStub({
+        offsetX: screenCenter.x,
+        offsetY: screenCenter.y,
+        button: controls.mouseButtons.PAN
+    }));
+
+    inputEvents.mousemove(new EventStub({
+        offsetX: screenCenter.x + 10,
+        offsetY: screenCenter.y + 10
+    }));
+
+    inputEvents.mouseup();
+    
+    advanceFrames(1000);
+    
+    t.is(fastRound(currentDistance()), fastRound(controls.minDistance));
+    t.notDeepEqual(first_campos.toArray(), controls.camera.position.toArray());
+
+});
+
+test('sphere test rotation calibration; when rotated the point on the sphere should stay under the cursor', (t) => {
+    controls.camera.updateWorldMatrix();
+    testPanCalibration(t, new Vector2(10, 10), 0.001);
+});
+
+test('sphere test zoom out stops at correct distance from sphere', (t) => {
+    (Array.apply(null, Array(20))).forEach(function(){
+        inputEvents.mousewheel(new EventStub({
+            wheelDelta: -1,
+            offsetX: window.document.body.clientWidth / 2,
+            offsetY: window.document.body.clientHeight / 2
+        }));
+    });
+
+    advanceFrames(1000);
+
+    t.is(fastRound(controls.maxDistance), fastRound(currentDistance()));
 });
