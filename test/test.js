@@ -192,6 +192,7 @@ var testPanCalibration = function(t, new_x, new_y){
         button: controls.mouseButtons.PAN
     }));
 
+    var first_campos = controls.camera.position.clone();
     var first_intersect = intersectMouse(mouse_x, mouse_y);
 
     inputEvents.mousemove(new EventStub({
@@ -201,6 +202,7 @@ var testPanCalibration = function(t, new_x, new_y){
 
     advanceFrames(1000);
 
+    var second_campos = controls.camera.position.clone();
     var second_intersect = intersectMouse(new_x, new_y);
 
     //second_intersect should be the same as first_intersect; e.g. the point in world-space under the mouse should not
@@ -208,6 +210,7 @@ var testPanCalibration = function(t, new_x, new_y){
     var tolerance = 0.0001;
     const delta = Math.abs(new THREE.Vector3().subVectors(second_intersect, first_intersect).length());
     t.truthy(delta <= tolerance);
+    t.notDeepEqual(first_campos.toArray(), second_campos.toArray());
 };
 
 test('mouse should keep same world coordinates under it during camera pan (pan calibration)', function(t){

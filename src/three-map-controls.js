@@ -124,8 +124,9 @@ class MapControls extends EventDispatcher{
             this.camera.position.lerpVectors(this._minZoomPosition, this._maxZoomPosition, this.initialZoom);
             this._finalTargetDistance = this._currentTargetDistance = Math.abs(this.target.distanceToPoint(this.camera.position));
 
-            this.camera.lookAt(this._maxZoomPosition); //set the orientation of the camera towards the map.
-            this._camOrientation = this._intersectCameraTarget().ray.direction.clone().normalize();
+            const res = this._intersectCameraTarget();
+            this.camera.lookAt(res.intersection); //set the orientation of the camera towards the map.
+            this._camOrientation = res.ray.direction.clone().normalize();
 
             this._updateZoomAlpha();
 
