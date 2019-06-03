@@ -37,7 +37,7 @@ function advanceFrames(frames){
 };
 
 function currentDistance(){
-    return Math.abs(controls.target.distanceToPoint(camera.position));
+    return Math.abs(controls.target.distanceToPoint(controls.camera.position));
 };
 
 const stub = function(){};

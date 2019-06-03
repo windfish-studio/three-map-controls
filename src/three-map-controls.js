@@ -95,8 +95,8 @@ class MapControls extends EventDispatcher{
 
             this._mouse = new Vector2();
 
-            this._finalTargetDistance;
-            this._currentTargetDistance;
+            this._finalTargetDistance = 0;
+            this._currentTargetDistance = 0;
 
             this._panTarget = new Vector3();
             this._panCurrent = new Vector3();
@@ -153,7 +153,9 @@ class MapControls extends EventDispatcher{
 
             switch(this.mode){
                 case 'plane':
-                    ray = new Ray(this.camera.position, new Vector3().subVectors(this.target.normal.clone().multiplyScalar(this.target.constant), this.camera.position).normalize());
+                    const coplanar = new Vector3();
+                    this.target.projectPoint(this.camera.position, coplanar);
+                    ray = new Ray(this.camera.position, new Vector3().subVectors(coplanar, this.camera.position).normalize());
                     ray.intersectPlane(this.target, intersection);
                     break;
                 case 'sphere':
