@@ -153,13 +153,8 @@ class MapControls extends EventDispatcher{
 
             switch(this.mode){
                 case 'plane':
-                    [-1, 1].forEach((orientation) => {
-                        if(intersection && intersection.length() > 0)
-                            return;
-
-                        ray = new Ray(this.camera.position, this.target.normal.clone().multiplyScalar(orientation).normalize());
-                        ray.intersectPlane(this.target, intersection);
-                    });
+                    ray = new Ray(this.camera.position, new Vector3().subVectors(this.target.normal.clone().multiplyScalar(this.target.constant), this.camera.position).normalize());
+                    ray.intersectPlane(this.target, intersection);
                     break;
                 case 'sphere':
                     ray = new Ray(this.camera.position, (new Vector3()).subVectors(this.target.center, this.camera.position).normalize());
