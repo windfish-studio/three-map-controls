@@ -67,9 +67,8 @@ test("shouldn't allow initialization if camera intersects plane", function (t) {
         t.pass('camera cannot intersect target plane on init');
     }
 
-    var _init_pos = initial_cam_pos.clone();
-    _init_pos.z = -1;
-    camera.position.copy(_init_pos);
+    camera.position.copy(initial_cam_pos.clone());
+    camera.position.z = 1;
 
     try{
         controls = new MapControls( camera, window.document.body, defaultOpts );
@@ -78,6 +77,16 @@ test("shouldn't allow initialization if camera intersects plane", function (t) {
         console.log(e);
         t.fail('controls not created successfully');
     }
+
+
+});
+
+test('should correctly determine the camera orientation to the target plane', function (t) {
+    t.deepEqual(controls._camOrientation.toArray(), [0,0,-1]);
+    camera.position.z = -1;
+    controls = new MapControls( camera, window.document.body, defaultOpts );
+    t.deepEqual(controls._camOrientation.toArray(), [0,0,1]);
+
 });
 
 test('should initialize with cam at controls.maxDistance by default', function(t){
