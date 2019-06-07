@@ -49,6 +49,8 @@ class MapControls extends EventDispatcher{
 
             // Mouse buttons
             this.mouseButtons = { ZOOM: MOUSE.MIDDLE, PAN: MOUSE.LEFT };
+
+
             
             //Copy options from parameters
             Object.assign(this, options);
@@ -71,22 +73,33 @@ class MapControls extends EventDispatcher{
                 throw new Error('\'target\' option must be an instance of type THREE.Plane or THREE.Sphere');
             }
 
-            // for reset
+            this._eventListeners = {
+                'contextmenu': this._onContextMenu.bind(this),
+                'mousedown': this._onMouseDown.bind(this),
+                'mousewheel': this._onMouseWheel.bind(this),
+                'MozMousePixelScroll': this._onMouseWheel.bind(this),
+                'touchstart': this._onTouchStart.bind(this),
+                'touchend': this._onTouchEnd.bind(this),
+                'touchmove': this._onTouchMove.bind(this),
+                'keydown': this._onKeyDown.bind(this),
+                'mousemove': this._onMouseMove.bind(this),
+                'mouseup': this._onMouseUp.bind(this)
+            };
+
+            this._init();
+        }
+
+        _init (){
+
             this.target0 = this.target.clone();
             this.position0 = this.camera.position.clone();
             this.zoom0 = this.camera.zoom;
-
             this._changeEvent = { type: 'change' };
             this._startEvent = { type: 'start' };
             this._endEvent = { type: 'end' };
 
             this._STATES = { NONE : - 1, DOLLY : 1, PAN : 2, TOUCH_DOLLY : 4, TOUCH_PAN : 5 };
 
-
-            this._init();
-        }
-
-        _init (){
             if(this.target.distanceToPoint(this.camera.position) == 0){
                 throw new Error("ORIENTATION_UNKNOWABLE: initial Camera position cannot intersect target plane.");
             }
@@ -132,17 +145,18 @@ class MapControls extends EventDispatcher{
 
             //Assign event listeners
 
-            this.domElement.addEventListener( 'contextmenu', this._onContextMenu.bind(this), false );
-
-            this.domElement.addEventListener( 'mousedown', this._onMouseDown.bind(this), false );
-            this.domElement.addEventListener( 'mousewheel', this._onMouseWheel.bind(this), false );
-            this.domElement.addEventListener( 'MozMousePixelScroll', this._onMouseWheel.bind(this), false ); // firefox
-
-            this.domElement.addEventListener( 'touchstart', this._onTouchStart.bind(this), false );
-            this.domElement.addEventListener( 'touchend', this._onTouchEnd.bind(this), false );
-            this.domElement.addEventListener( 'touchmove', this._onTouchMove.bind(this), false );
-
-            this.domElement.addEventListener( 'keydown', this._onKeyDown.bind(this), false );
+            [
+                'contextmenu',
+                'mousedown',
+                'mousewheel',
+                'MozMousePixelScroll',
+                'touchstart',
+                'touchend',
+                'touchmove',
+                'keydown'
+            ].forEach(_e => {
+                this.domElement.addEventListener(_e, this._eventListeners[_e]);
+            });
 
 
             this.update();
@@ -238,19 +252,9 @@ class MapControls extends EventDispatcher{
         }
 
         dispose () {
-            this.domElement.removeEventListener( 'contextmenu', this._onContextMenu, false );
-            this.domElement.removeEventListener( 'mousedown', this._onMouseDown, false );
-            this.domElement.removeEventListener( 'mousewheel', this._onMouseWheel, false );
-            this.domElement.removeEventListener( 'MozMousePixelScroll', this._onMouseWheel, false ); // firefox
-
-            this.domElement.removeEventListener( 'touchstart', this._onTouchStart, false );
-            this.domElement.removeEventListener( 'touchend', this._onTouchEnd, false );
-            this.domElement.removeEventListener( 'touchmove', this._onTouchMove, false );
-
-            this.domElement.removeEventListener( 'mousemove', this._onMouseMove, false );
-            this.domElement.removeEventListener( 'mouseup', this._onMouseUp, false );
-
-            this.domElement.removeEventListener( 'keydown', this._onKeyDown, false );
+            Object.keys(this._eventListeners).forEach(_e =>{
+                this.domElement.removeEventListener(_e, this._eventListeners[_e], false);
+            });
         };
 
         zoomToFit (mesh, center, width, height){
@@ -703,8 +707,8 @@ class MapControls extends EventDispatcher{
 
             if ( this._state !== this._STATES.NONE ) {
 
-                this.domElement.addEventListener( 'mousemove', this._onMouseMove.bind(this), false );
-                this.domElement.addEventListener( 'mouseup', this._onMouseUp.bind(this), false );
+                this.domElement.addEventListener( 'mousemove', this._eventListeners.mousemove, false );
+                this.domElement.addEventListener( 'mouseup', this._eventListeners.mouseup, false );
 
                 this.dispatchEvent( this._startEvent );
 
@@ -738,8 +742,8 @@ class MapControls extends EventDispatcher{
 
             this._handleMouseUp( event );
 
-            this.domElement.removeEventListener( 'mousemove', this._onMouseMove, false );
-            this.domElement.removeEventListener( 'mouseup', this._onMouseUp, false );
+            this.domElement.removeEventListener( 'mousemove', this._eventListeners.mousemove, false );
+            this.domElement.removeEventListener( 'mouseup', this._eventListeners.mouseup, false );
 
             this.dispatchEvent( this._endEvent );
 
