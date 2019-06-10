@@ -1,132 +1,198 @@
 # three-map-controls
-Map controls class for threeJS (pan and zoom with respect to a THREE.Plane)
+Map Controls class for ThreeJS; pan and zoom with respect to a ThreeJS [_Plane_](https://threejs.org/docs/#api/en/math/Plane) or [_Sphere_](https://threejs.org/docs/#api/en/math/Sphere).
 
-Works with mobile device touch events.
-
-CHANGELOG:
-
-v1.0.1 - May 19 2018; 
-
-Update the project to use ES6-style classes and function scoping features. 
-Removes previous ES6 compatability hacks. Switches out browserify for webpack.
-Packages demo and test bundles with webpack, moving test
-suite to the client. 
-
-Finally adding a universal zoomToFit(mesh) function which optimally fills the screen with a given geometry
-by dollying the camera towards or away from it. 
-
-Adjust the relationship of pan/dolly Vector math within update(). 
-
-##usage
+The aim of this library is to provide a ThreeJS-compatible interface by which a user can interact with a map, either two-dimensonal (a plane) or three-dimensonal (a sphere). The controls provided are meant to behave in the most _natural_ way possible for cartographic navigation; e.g. panning the map by dragging the mouse should keep the same point under the cursor as the map moves. 
+## Usage
 
 ```javascript
 import MapControls from 'three-map-controls'
 
-// currently, only PerspectiveCamera is supported
+const radius = 6.0;
 new MapControls( camera, renderer.domElement, {
-    target: new THREE.Plane(new THREE.Vector3(0,0,1), 0),
+    mode: 'sphere',
+    target: new Sphere(new THREE.Vector3(0,0,0), radius),
     minDistance: 2.0,
     maxDistance: 20
 });
 ```
 
-Here's a [jsfiddle demo]: https://jsfiddle.net/sikanrong/m8c250o2/
+Here's a [JSFiddle demo](https://jsfiddle.net/sikanrong/m8c250o2/).
 
 
-##options
+##### Change Log
 
+###### v1.1.3 - Jun 07 2019
+
+Lots of big changes in the latest version, namely supporting a spherical target mode (e.g. a globe instead of a 2D map). 
+
+As well, v1.1.3 introduces a _targetAreaVisible()_ function which returns the currently-visible portion of the map, in world coordinates. 
+
+In spherical mode, _targetAreaVisible()_ returns a bounding box in spherical coordinates (theta and phi, in radians). Translating these coordinates to degrees will yield a latitude-longitude bounding box. 
+
+These changes are reflected in the tests, which now use the Ava testing framework. As well, the [jsfiddle demo](https://jsfiddle.net/sikanrong/m8c250o2/) has been updated to show off the new functionality.
+
+###### v1.0.1 - May 19 2018
+
+Update the project to use ES6-style classes and function scoping features. Removes previous ES6 compatability hacks. Switches out browserify for webpack. Packages demo and test bundles with webpack, moving test
+suite to the client. 
+
+Finally adding a universal zoomToFit(mesh) function which optimally fills the screen with a given geometry by dollying the camera towards or away from it. 
+
+Adjust the relationship of pan/dolly Vector math within update(). 
+
+## API
+
+#### Member Variables
+
+
+###### target: Plane|Sphere
+Must be set to instance of threejs Plane or Sphere. *required*
 ```javascript
-// this.[option] = [default value];
-
-// Set to false to disable this control (Disables all input events)
-this.enabled = true;
-
-// Must be set to instance of THREE.Plane
-this.target;
-
-// How far you can dolly in and out
-this.minDistance = 1; //probably should never be 0
-this.maxDistance = 100;
-
-// This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
-// Set to false to disable zooming
-this.enableZoom = true;
-this.zoomSpeed = 3.0;
-this.zoomDampingAlpha = 0.1;
-
-// Set to false to disable panning
-this.enablePan = true;
-this.keyPanSpeed = 12.0;	// pixels moved per arrow key push
-this.panDampingAlpha = 0.2;
-
-// Set to false to disable use of the keys
-this.enableKeys = true;
-
-// The four arrow keys
-this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
-
-// Mouse buttons
-this.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
-
+mapControls.target = new Sphere(new Vector3(0,0,0), 5);
 ```
 
-##public functions
+###### mode: string
+Must either be set to 'sphere' or 'plane'. *required*
 ```javascript
-
-//will automatically center mesh and adjust the camera position so that mesh
-//fits the screen. if center, width or height are ommitted the algorithm will 
-//use a boundingSphere, which will produce a less-accurate fit for complex 
-//geometry. 
-// 
-//Due to the rectangular nature of screens, if one passes the bounding box  
-//center as well its width/height (relative to the target plane), the geometry
-//will reach the edges of the screen. 
-
-this.zoomToFit(mesh, center, width, height)
-
-// returns current zoom value [range between 0 and 1];
-// O represents the camera at maxDistance from the target-plane, and 1 is the camera at minDistance.
-this.getZoomAlpha();
-
-//needs to be called on each animation frame.
-this.update();
-
+mapControls.mode = 'sphere';
 ```
 
-##TAP-compatible tests
+###### enabled: boolean
+Set to false to disable all input events.
+```javascript
+mapControls.enabled = true;
+```
+
+###### min/maxDistance: number
+How far you can dolly the camera in and out from the target geometry. 
+```javascript
+mapControls.minDistance = 1; //probably should never be 0
+mapControls.maxDistance = 100;
+```
+
+###### enableZoom: boolean
+Set to false to disable all camera-dolly events.
+```javascript
+mapControls.enableZoom = true; 
+```
+
+###### zoomSpeed: number
+Set speed of camera dolly; how fast the camera will move towards the target geometry on mousewheel events
+```javascript
+mapControls.zoomSpeed = 3.0; 
+```
+
+###### zoomDampingAlpha: number
+Set the damping of the dolly movement; makes the camera dolly movement feel smoother.
+```javascript
+mapControls.zoomDampingAlpha = 0.1; 
+```
+
+###### enablePan: boolean
+Set to false to disable camera pan inputs. In 'sphere' mode, this disables rotation of the camera about the sphere.
+```javascript
+mapControls.enablePan = true;
+```
+
+###### panDampingAlpha: number
+Sets the damping of the pan movement; makes camera pan movement feel smoother.
+```javascript
+mapControls.panDampingAlpha = 0.2;
+```
+
+###### enableKeys: boolean
+Enable/disable keyboard input
+```javascript
+mapControls.enableKeys = true;
+```
+
+###### keyPanSpeed: number
+Define how fast the camera should pan for each keypress. Everything on the screen should move this many pixels per kepress.
+```javascript
+mapControls.keyPanSpeed = 12.0; 
+```
+
+###### keys: object
+Define the keyboard char-codes which map to each pan movement.
+```javascript
+mapControls.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+```
+###### mouseButtons: object
+Define the mouse buttons and what action each one is mapped to. (Note: all values are from the threejs MOUSE enumeration)
+```javascript
+mapControls.mouseButtons = { ZOOM: THREE.MOUSE.MIDDLE, PAN: THREE.MOUSE.LEFT };
+```
+
+#### Member Functions
+
+###### getZoomAlpha(void): number
+returns current zoom value as a range between 0 and 1; zero represents the camera at mapControls.maxDistance from the target geometry (plane or sphere), and 1 is the camera at mapControls.maxDistance.
+```javascript
+mapControls.getZoomAlpha();
+```
+
+###### update(void): void
+Called on each animation frame, updates all of the internal calculations and the camera position/lookAt vectors. 
+```javascript
+mapControls.update();
+```
+
+###### targetAreaVisible(void): [Box3](https://threejs.org/docs/#api/en/math/Box3)
+Returns the bounding box which defines the currently-visible area of the map, in world coordinates. 
+
+In spherical mode, returns a bounding box in spherical coordinates (Θ and φ; in radians). Translating these coordinates to degrees will yield a latitude-longitude bounding box. 
+```javascript
+mapControls.update();
+```
+
+## TODO
+
+- Add typescript type definitions. 
+- Add JSDoc documentation
+
+## Testing
+```bash
+npm run test
+```
 ```
 TAP version 13
 # shouldn't allow initialization if camera intersects plane
-ok 1 camera cannot intersect target plane on init
-ok 2 controls created correctly
+ok 1 - shouldn't allow initialization if camera intersects plane
+# should correctly determine the camera orientation to the target plane
+ok 2 - should correctly determine the camera orientation to the target plane
 # should initialize with cam at controls.maxDistance by default
-ok 3 should be equal
-ok 4 should be equal
+ok 3 - should initialize with cam at controls.maxDistance by default
 # shouldn't move from initial position if no input received
-ok 5 should be equal
-ok 6 should be truthy
+ok 4 - shouldn't move from initial position if no input received
 # should automatically orient camera towards plane based on starting position
-ok 7 should be truthy
+ok 5 - should automatically orient camera towards plane based on starting position
 # should lerp camera towards target plane on mousewheel
-ok 8 should be equal
+ok 6 - should lerp camera towards target plane on mousewheel
 # should stop zooming at minDistance from target plane
-ok 9 should be equal
-ok 10 should be equal
+ok 7 - should stop zooming at minDistance from target plane
 # reset should revert camera to correct initial position
-ok 11 should be truthy
+ok 8 - reset should revert camera to correct initial position
 # should zoom into mouse pointer
-ok 12 should be truthy
+ok 9 - should zoom into mouse pointer
 # mouse should keep same world coordinates under it during camera pan (pan calibration)
-ok 13 should be truthy
+ok 10 - mouse should keep same world coordinates under it during camera pan (pan calibration)
 # initialZoom parameter should set the default cam position correctly
-ok 14 should be equal
-ok 15 should be equal
+ok 11 - initialZoom parameter should set the default cam position correctly
 # pan calibration should hold true when zoomed in
-ok 16 should be truthy
+ok 12 - pan calibration should hold true when zoomed in
+# sphere camera should return correct targetVisibleArea
+ok 13 - sphere camera should return correct targetVisibleArea
+# sphere camera should return correct targetVisibleArea on zoom
+ok 14 - sphere camera should return correct targetVisibleArea on zoom
+# sphere camera should maintain distance from sphere as it rotates around
+ok 15 - sphere camera should maintain distance from sphere as it rotates around
+# sphere test rotation calibration; when rotated the point on the sphere should stay under the cursor
+ok 16 - sphere test rotation calibration; when rotated the point on the sphere should stay under the cursor
+# sphere test zoom out stops at correct distance from sphere
+ok 17 - sphere test zoom out stops at correct distance from sphere
 
-1..16
-# tests 16
-# pass  16
-
-# ok
+1..17
+# tests 17
+# pass 17
+# fail 0
 ```

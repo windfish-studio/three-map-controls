@@ -5,6 +5,9 @@
     "type": "git",
     "url": "https://github.com/sikanrong/three-map-controls.git"
   },
+  "scripts": {
+    "test": "ava --tap test/test.js"
+  },
   "main": "src/three-map-controls.js",
   "author": {
     "name": "Alex Pilafian",
