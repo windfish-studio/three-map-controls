@@ -5,7 +5,7 @@ The aim of this library is to provide a ThreeJS-compatible interface by which a 
 ## Usage
 
 ```javascript
-import MapControls from 'three-map-controls'
+import MapControls from '@windfish-studio/three-map-controls'
 
 const radius = 6.0;
 new MapControls( camera, renderer.domElement, {

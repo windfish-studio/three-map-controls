@@ -111,8 +111,8 @@ class MapControls extends EventDispatcher{
             this._finalTargetDistance = 0;
             this._currentTargetDistance = 0;
 
-            this._panTarget = new Vector3();
-            this._panCurrent = new Vector3();
+            this._panTarget = new Vector3(0,0,0);
+            this._panCurrent = new Vector3(0,0,0);
 
             this._minZoomPosition = new Vector3();
             this._maxZoomPosition = new Vector3();
@@ -213,9 +213,9 @@ class MapControls extends EventDispatcher{
 
         // this method is exposed, but perhaps it would be better if we can make it private...
         update () {
-            var panDelta = new Vector3();
-            var oldPanCurrent = new Vector3();
-            var position = this.camera.position;
+            const panDelta = new Vector3();
+            const oldPanCurrent = new Vector3();
+            const position = this.camera.position;
 
             // move target to panned location
             oldPanCurrent.copy(this._panCurrent);
@@ -241,6 +241,13 @@ class MapControls extends EventDispatcher{
                     this._maxZoomPosition.applyQuaternion(quat);
                     this._minZoomPosition.applyQuaternion(quat);
 
+                    //panDelta.z is only used for zoomToFit
+                    //all pan operations rotate around the camera's MatrixColumn axes, while zoomToFit needs to
+                    //rotate about the world Y-axis
+                    quat.setFromAxisAngle(new Vector3(0,1,0), panDelta.z);
+                    this._maxZoomPosition.applyQuaternion(quat);
+                    this._minZoomPosition.applyQuaternion(quat);
+
                     break;
             }
 
@@ -262,17 +269,30 @@ class MapControls extends EventDispatcher{
             center = center || mesh.geometry.boundingSphere.center;
             width = width || (mesh.geometry.boundingSphere.radius * 2);
 
+            center = mesh.localToWorld(center.clone());
+
             if(height === undefined)
                 height = width;
 
-            this._panTarget.copy(mesh.localToWorld(center.clone()));
-            this._panCurrent.copy(this._intersectCameraTarget().intersection);
+            switch(this.mode){
+                case 'plane':
+                    this._panTarget.copy(center);
+                    this._panCurrent.copy(this._intersectCameraTarget().intersection);
+                    break;
+                case 'sphere':
+                    const targetCoord = this._sphericalCoordinatesFrom(center);
+                    const camCoord = this._sphericalCoordinatesFrom(this.camera.position);
+                    const delta = new Vector2().subVectors(targetCoord, camCoord);
+
+                    this._panTarget.add(new Vector3(0, -delta.y, delta.x));
+                    break;
+            }
 
             this._straightDollyTrack();
 
-            var vFOV = this.camera.fov * (Math.PI / 180);
-            var hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
-            var obj_aspect = width / height;
+            const vFOV = this.camera.fov * (Math.PI / 180);
+            const hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
+            const obj_aspect = width / height;
 
             this._finalTargetDistance = ((((obj_aspect > this.camera.aspect)? width : height) / 2) / Math.tan(((obj_aspect > this.camera.aspect)? hFOV : vFOV) / 2));
 
@@ -301,18 +321,10 @@ class MapControls extends EventDispatcher{
 
                     break;
                 case 'sphere':
-
-                    const cam_pos = ((new Vector3()).subVectors(this.target.center, this.camera.position));
-                    const cam_xpos = new Vector3(cam_pos.x, 0, cam_pos.z);
+                    const cam_pos = (new Vector3()).subVectors(this.target.center, this.camera.position);
+                    center = this._sphericalCoordinatesFrom(this.camera.position);
 
                     const halfPi = Math.PI / 2;
-
-                    center = new Vector2(
-                        cam_xpos.angleTo(new Vector3(1,0,0)),
-                        cam_pos.angleTo(new Vector3(0,1,0))
-                    );
-
-                    center.x = (this.camera.position.z < 0)? (2*Math.PI - center.x) : center.x;
 
                     const d = cam_pos.length();
 
@@ -339,6 +351,19 @@ class MapControls extends EventDispatcher{
             };
 
             return bbox;
+        }
+
+        _sphericalCoordinatesFrom (cartesian_vec) {
+            const rel_pos = ((new Vector3()).subVectors(this.target.center, cartesian_vec));
+            const rel_xzcomponent = new Vector3(rel_pos.x, 0, rel_pos.z);
+
+            const v = new Vector3();
+            const sphCoord = new Vector2(
+                rel_xzcomponent.angleTo(new Vector3(1,0,0)),
+                rel_pos.angleTo(new Vector3(0,1,0))
+            );
+            sphCoord.x = (rel_pos.z > 0)? (2*Math.PI - sphCoord.x) : sphCoord.x;
+            return sphCoord;
         }
 
         _updateZoomAlpha(){
