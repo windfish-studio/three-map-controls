@@ -2,6 +2,9 @@ import {
     Scene,
     Vector3,
     Vector2,
+    Quaternion,
+    Box2,
+    Box3,
     PerspectiveCamera,
     SphereBufferGeometry,
     PlaneBufferGeometry,
@@ -284,7 +287,9 @@ class MapControlsDemo {
             case 'sphere':
                 this.controls.zoomToFit(
                     this.selectedObject,
-                    this.selectedObject.userData.zoom.center
+                    this.selectedObject.userData.zoom.center,
+                    this.selectedObject.userData.zoom.width,
+                    this.selectedObject.userData.zoom.height
                 );
                 break;
             case 'plane':
@@ -357,10 +362,18 @@ class MapControlsDemo {
                         opacity: 0.5
                     }));
 
+                    const center = new Vector3();
+                    geo.boundingBox.getCenter(center);
+                    const projected = this.projectTriangleToPlane(new_vtx_ar, center);
+                    const box = new Box2().setFromPoints(projected);
+                    const dims = new Vector2();
+                    box.getSize(dims);
 
                     Object.assign(this.selectedObject.userData, {
                         zoom: {
-                            center: this.findTriangleCenter(new_vtx_ar)
+                            center: center,
+                            width: dims.x,
+                            height: dims.y
                         }
                     });
 
@@ -382,18 +395,23 @@ class MapControlsDemo {
 
     }
 
-    findTriangleCenter (verts_ar) {
-        let center = [0,0,0];
-
-        [0,1,2].forEach(_v => {
-            [0,1,2].forEach(_d => {
-                center[_d] += verts_ar[(_v*3) + _d];
-            });
+    projectTriangleToPlane(verts_ar, center){
+        const vecs = [0,1,2].map(_t => {
+            return new Vector3().fromArray([0,1,2].map(_v => {
+                return verts_ar[(_t*3)+_v];
+            })).sub(center);
         });
 
-        center = center.map(_d => {return _d / 3;});
+        const norm = center.clone().normalize();
+        const right = new Vector3().crossVectors(new Vector3(0,1,0), norm).normalize();
+        const up = new Vector3().crossVectors(norm, right).normalize();
+        return vecs.map(_v => {
+            return new Vector2(
+                _v.dot(right),
+                _v.dot(up)
+            );
+        });
 
-        return (new Vector3()).fromArray(center);
     }
 
     onWindowResize(){
