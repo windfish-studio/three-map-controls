@@ -2,7 +2,17 @@
 
 //Alex Pilafian 2016-2019 - sikanrong@gmail.com
 
-import {Box2, Quaternion, EventDispatcher, Vector2, Vector3, Raycaster, Ray, MOUSE} from 'three'
+import {
+    Box2,
+    Quaternion,
+    EventDispatcher,
+    Vector2,
+    Vector3,
+    Object3D,
+    Raycaster,
+    Ray,
+    MOUSE
+} from 'three'
 
 //test stubs
 if(typeof window == 'undefined'){
@@ -264,15 +274,21 @@ class MapControls extends EventDispatcher{
             });
         };
 
-        zoomToFit (mesh, center, width, height){
-            //if only width is passed interpret it as radius and set height equal to width
-            center = center || mesh.geometry.boundingSphere.center;
-            width = width || (mesh.geometry.boundingSphere.radius * 2);
+        zoomToFit (mesh, center, dims){
+
+            if(center === undefined){
+                center = mesh.geometry.boundingSphere.center.clone();
+            }
 
             center = mesh.localToWorld(center.clone());
 
-            if(height === undefined)
-                height = width;
+            if(dims === undefined){
+                const diameter = (mesh.geometry.boundingSphere.radius * 2);
+                dims = new Vector2(
+                    diameter,
+                    diameter
+                );
+            }
 
             switch(this.mode){
                 case 'plane':
@@ -297,9 +313,9 @@ class MapControls extends EventDispatcher{
 
             const vFOV = this.camera.fov * (Math.PI / 180);
             const hFOV = 2 * Math.atan( Math.tan( vFOV / 2 ) * this.camera.aspect );
-            const obj_aspect = width / height;
+            const obj_aspect = dims.x / dims.y;
 
-            this._finalTargetDistance = ((((obj_aspect > this.camera.aspect)? width : height) / 2) / Math.tan(((obj_aspect > this.camera.aspect)? hFOV : vFOV) / 2));
+            this._finalTargetDistance = ((((obj_aspect > this.camera.aspect)? dims.x : dims.y) / 2) / Math.tan(((obj_aspect > this.camera.aspect)? hFOV : vFOV) / 2));
 
 
         };

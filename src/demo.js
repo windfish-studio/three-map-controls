@@ -288,8 +288,7 @@ class MapControlsDemo {
                 this.controls.zoomToFit(
                     this.selectedObject,
                     this.selectedObject.userData.zoom.center,
-                    this.selectedObject.userData.zoom.width,
-                    this.selectedObject.userData.zoom.height
+                    this.selectedObject.userData.zoom.dims
                 );
                 break;
             case 'plane':
@@ -363,13 +362,11 @@ class MapControlsDemo {
                     }));
 
                     const projected = this.projectTriangleToPlane(new_vtx_ar);
-                    const dims = projected.projection_size;
 
                     Object.assign(this.selectedObject.userData, {
                         zoom: {
                             center: projected.center,
-                            width: dims.x,
-                            height: dims.y
+                            dims: projected.projection_size
                         }
                     });
 
@@ -427,8 +424,8 @@ class MapControlsDemo {
         center.add(right.clone().multiplyScalar(prj_delta.x));
 
         return {
-            projection: prj_vecs,
             center: center,
+            projection: prj_vecs,
             projection_bbox: prj_bbox,
             projection_size: prj_dims
         };
