@@ -8,7 +8,6 @@ import {
     EventDispatcher,
     Vector2,
     Vector3,
-    Object3D,
     Raycaster,
     Ray,
     MOUSE
