@@ -362,16 +362,12 @@ class MapControlsDemo {
                         opacity: 0.5
                     }));
 
-                    const center = new Vector3();
-                    geo.boundingBox.getCenter(center);
-                    const projected = this.projectTriangleToPlane(new_vtx_ar, center);
-                    const box = new Box2().setFromPoints(projected);
-                    const dims = new Vector2();
-                    box.getSize(dims);
+                    const projected = this.projectTriangleToPlane(new_vtx_ar);
+                    const dims = projected.projection_size;
 
                     Object.assign(this.selectedObject.userData, {
                         zoom: {
-                            center: center,
+                            center: projected.center,
                             width: dims.x,
                             height: dims.y
                         }
@@ -395,23 +391,62 @@ class MapControlsDemo {
 
     }
 
-    projectTriangleToPlane(verts_ar, center){
+    projectTriangleToPlane(verts_ar){
+        const centroid = this.findTriangleCentroid(verts_ar);
+
         const vecs = [0,1,2].map(_t => {
             return new Vector3().fromArray([0,1,2].map(_v => {
                 return verts_ar[(_t*3)+_v];
-            })).sub(center);
+            })).sub(centroid);
         });
 
-        const norm = center.clone().normalize();
+        const norm = new Vector3().crossVectors(vecs[1], vecs[0]).normalize();
         const right = new Vector3().crossVectors(new Vector3(0,1,0), norm).normalize();
         const up = new Vector3().crossVectors(norm, right).normalize();
-        return vecs.map(_v => {
+        const prj_vecs = vecs.map(_v => {
             return new Vector2(
                 _v.dot(right),
                 _v.dot(up)
             );
         });
 
+        const prj_bbox = new Box2().setFromPoints(prj_vecs);
+        const prj_dims = new Vector2();
+        prj_bbox.getSize(prj_dims);
+
+        const prj_center = new Vector2(
+            prj_bbox.min.x + (prj_dims.x / 2),
+            prj_bbox.min.y + (prj_dims.y / 2)
+        );
+
+        const prj_delta = new Vector2().subVectors(prj_center,  prj_vecs[0]);
+
+        //translate the 3d centroid to the position of the 2d projected center via prj_delta, up, and right.
+        const center = vecs[0].clone().add(centroid);
+        center.add(up.clone().multiplyScalar(prj_delta.y));
+        center.add(right.clone().multiplyScalar(prj_delta.x));
+
+        return {
+            projection: prj_vecs,
+            center: center,
+            projection_bbox: prj_bbox,
+            projection_size: prj_dims
+        };
+
+    }
+
+    findTriangleCentroid (verts_ar) {
+        let center = [0,0,0];
+
+        [0,1,2].forEach(_v => {
+            [0,1,2].forEach(_d => {
+                center[_d] += verts_ar[(_v*3) + _d];
+            });
+        });
+
+        center = center.map(_d => {return _d / 3;});
+
+        return (new Vector3()).fromArray(center);
     }
 
     onWindowResize(){
