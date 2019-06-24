@@ -284,6 +284,11 @@ class MapControls extends EventDispatcher{
                     const camCoord = this._sphericalCoordinatesFrom(this.camera.position);
                     const delta = new Vector2().subVectors(targetCoord, camCoord);
 
+                    //Handle wrapping around the antimeridian; the line of 2π (or 0) radians
+                    if(Math.abs(delta.x) > Math.PI){
+                        delta.x = (-Math.abs(delta.x) / delta.x) * ((Math.PI * 2) - Math.abs(delta.x));
+                    }
+
                     this._panTarget.add(new Vector3(0, -delta.y, delta.x));
                     break;
             }
