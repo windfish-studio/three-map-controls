@@ -1,12 +1,14 @@
 {
   "name": "@windfish-studio/three-map-controls",
   "version": "1.1.5",
+  "types": "types",
   "repository": {
     "type": "git",
     "url": "https://github.com/sikanrong/three-map-controls.git"
   },
   "scripts": {
-    "test": "ava --tap test/test.js"
+    "test": "ava --tap test/test.js",
+    "dtslint": "dtslint types"
   },
   "main": "src/three-map-controls.js",
   "author": {
@@ -36,7 +38,9 @@
     "gulp-util": "3.0.7",
     "del": "2.2.2",
     "path": "0.12.7",
-    "resolve-file": "0.2.1"
+    "resolve-file": "0.2.1",
+    "dtslint": "^0.8.0",
+    "typescript": "^3.5.3"
   },
   "ava": {
     "require": [
