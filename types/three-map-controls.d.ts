@@ -29,11 +29,16 @@ export enum MapMode {
     sphere
 }
 
+export interface MapControlsRequiredOpts {
+    target: MapControls['target'];
+    mode: MapControls['mode'];
+}
+
 export default class MapControls extends EventDispatcher {
     constructor(
         camera: PerspectiveCamera,
         domElement: Element,
-        options: {[key in keyof MapControls]?: MapControls[key]}
+        options: MapControlsRequiredOpts & { [key in keyof MapControls]?: MapControls[key] }
     );
 
     camera: PerspectiveCamera;
