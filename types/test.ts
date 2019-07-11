@@ -28,5 +28,5 @@ controls.mouseButtons = {PAN: MOUSE.RIGHT};
 controls.mouseButtons = {FOO: "BAR"}; // $ExpectError
 controls.mouseButtons = {FOO: MOUSE.LEFT}; // $ExpectError
 
-controls.keys = {UP: 1};
+controls.keys = {PAN_UP: "ArrowUp"};
 controls.keys = {FOO: 1}; // $ExpectError

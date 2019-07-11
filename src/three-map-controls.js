@@ -47,19 +47,25 @@ class MapControls extends EventDispatcher{
 
             // Set to false to disable panning
             this.enablePan = true;
-            this.keyPanSpeed = 12.0;	// pixels moved per arrow key push
+            this.keyPanSpeed = 50.0;	// pixels moved per arrow key push
+            this.keyZoomSpeed = this.zoomSpeed;	// keyboard zoom speed, defaults to mouse-wheel zoom speed
             this.panDampingAlpha = 0.1;
 
             // Set to false to disable use of the keys
             this.enableKeys = true;
 
-            // The four arrow keys
-            this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+            // The four arrow keys, and two zoom keys
+            this.keys = {
+                PAN_LEFT: "ArrowLeft",
+                PAN_UP: "ArrowUp",
+                PAN_RIGHT: "ArrowRight",
+                PAN_BOTTOM: "ArrowDown",
+                ZOOM_IN: "]",
+                ZOOM_OUT: "["
+            };
 
             // Mouse buttons
             this.mouseButtons = { ZOOM: MOUSE.MIDDLE, PAN: MOUSE.LEFT };
-
-
             
             //Copy options from parameters
             Object.assign(this, options);
@@ -91,6 +97,8 @@ class MapControls extends EventDispatcher{
                 'touchend': this._onTouchEnd.bind(this),
                 'touchmove': this._onTouchMove.bind(this),
                 'keydown': this._onKeyDown.bind(this),
+                'mouseover': this._onMouseOver.bind(this),
+                'mouseout': this._onMouseOut.bind(this),
                 'mousemove': this._onMouseMove.bind(this),
                 'mouseup': this._onMouseUp.bind(this)
             };
@@ -162,11 +170,19 @@ class MapControls extends EventDispatcher{
                 'touchstart',
                 'touchend',
                 'touchmove',
+                'mouseover',
+                'mouseout',
                 'keydown'
             ].forEach(_e => {
-                this.domElement.addEventListener(_e, this._eventListeners[_e]);
+                this.domElement.addEventListener(_e, this._eventListeners[_e], false);
             });
 
+            if(this.domElement.tagName == 'CANVAS' &&
+               !this.domElement.getAttribute('tabindex')){
+                //if we're dealing with a canvas element which has no tabindex,
+                //give it one so that it may recieve keyboard focus
+                this.domElement.setAttribute('tabindex', '1');
+            }
 
             this.update();
         }
@@ -417,10 +433,10 @@ class MapControls extends EventDispatcher{
             }
         }
 
-        _getZoomScale() {
-            return Math.pow( 0.95, this.zoomSpeed );
+        _getZoomScale(speed) {
+            speed = speed || this.zoomSpeed;
+            return Math.pow( 0.95, speed );
         }
-
 
         _panLeft( distance, cameraMatrix ) {
             var v = new Vector3();
@@ -612,25 +628,35 @@ class MapControls extends EventDispatcher{
 
             //console.log( 'handleKeyDown' );
 
-            switch ( event.keyCode ) {
+            switch ( event.key ) {
 
-                case this.keys.UP:
+                case this.keys.PAN_UP:
                     this._pan( 0, this.keyPanSpeed );
                     this.update();
                     break;
 
-                case this.keys.BOTTOM:
+                case this.keys.PAN_BOTTOM:
                     this._pan( 0, - this.keyPanSpeed );
                     this.update();
                     break;
 
-                case this.keys.LEFT:
+                case this.keys.PAN_LEFT:
                     this._pan( this.keyPanSpeed, 0 );
                     this.update();
                     break;
 
-                case this.keys.RIGHT:
+                case this.keys.PAN_RIGHT:
                     this._pan( - this.keyPanSpeed, 0 );
+                    this.update();
+                    break;
+
+                case this.keys.ZOOM_IN:
+                    this._dollyIn( this._getZoomScale(this.keyZoomSpeed) )
+                    this.update();
+                    break;
+
+                case this.keys.ZOOM_OUT:
+                    this._dollyOut( this._getZoomScale(this.keyZoomSpeed) )
                     this.update();
                     break;
 
@@ -810,11 +836,9 @@ class MapControls extends EventDispatcher{
         }
 
         _onKeyDown( event ) {
-
             if ( this.enabled === false || this.enableKeys === false || this.enablePan === false ) return;
 
             this._handleKeyDown( event );
-
         }
 
         _onTouchStart( event ) {
@@ -904,6 +928,16 @@ class MapControls extends EventDispatcher{
 
         _onContextMenu( event ) {
             event.preventDefault();
+        }
+
+        _onMouseOver ( event ) {
+            this.domElement.focus();
+            return false;
+        }
+
+        _onMouseOut ( event ) {
+            this.domElement.blur();
+            return false;
         }
 
 };

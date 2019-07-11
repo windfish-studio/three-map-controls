@@ -12,11 +12,13 @@ import {
     Vector3
 } from "three";
 
-export enum DirectionalKeys {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT
+export enum KeyboardActions {
+    PAN_UP,
+    PAN_DOWN,
+    PAN_LEFT,
+    PAN_RIGHT,
+    ZOOM_OUT,
+    ZOOM_IN
 }
 
 export enum MouseActions {
@@ -55,11 +57,13 @@ export default class MapControls extends EventDispatcher {
     initialZoom: number;
 
     enablePan: boolean;
-    keyPanSpeed: number;
     panDampingAlpha: number;
+
+    keyPanSpeed: number;
+    keyZoomSpeed: number;
     enableKeys: boolean;
 
-    keys: {[key in keyof typeof DirectionalKeys]?: number};
+    keys: {[key in keyof typeof KeyboardActions]?: string};
     mouseButtons: {[key in keyof typeof MouseActions]?: MOUSE};
 
     getZoomAlpha(): number;
