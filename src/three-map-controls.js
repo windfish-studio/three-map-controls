@@ -388,6 +388,17 @@ class MapControls extends EventDispatcher{
 
             return bbox;
         }
+    
+        targetAreaVisibleDeg() {
+            let bbox = this.targetAreaVisible();
+            if(this.mode == 'sphere'){
+                bbox['min'].x = bbox['min'].x * (180/Math.PI);
+                bbox['min'].y = bbox['min'].y * (180/Math.PI);
+                bbox['max'].x = bbox['max'].x * (180/Math.PI);
+                bbox['max'].y = bbox['max'].y * (180/Math.PI);
+            }
+            return bbox;
+        }
 
         _sphericalCoordinatesFrom (cartesian_vec) {
             const rel_pos = ((new Vector3()).subVectors(this.target.center, cartesian_vec));
