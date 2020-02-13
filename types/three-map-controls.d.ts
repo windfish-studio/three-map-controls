@@ -78,4 +78,6 @@ export default class MapControls extends EventDispatcher {
     ): void;
 
     targetAreaVisible(): Box2;
+    targetAreaVisibleDeg(): Box2;
+
 }

@@ -137,7 +137,7 @@ Called on each animation frame, updates all of the internal calculations and the
 mapControls.update();
 ```
 
-#### targetAreaVisible(void): [Box3](https://threejs.org/docs/#api/en/math/Box3)
+#### targetAreaVisible(void): [Box2](https://threejs.org/docs/#api/en/math/Box2)
 Returns the bounding box which defines the currently-visible area of the map, in world coordinates. 
 
 In spherical mode, returns a bounding box in spherical coordinates (Θ and φ; in radians). Translating these coordinates to degrees will yield a latitude-longitude bounding box. 
