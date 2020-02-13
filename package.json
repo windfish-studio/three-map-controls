@@ -26,7 +26,7 @@
     "@babel/register": "^7.4.0",
     "@babel/preset-env": "^7.4.3",
     "babel-loader": "^8.0.6",
-    "webpack-bundle-analyzer": "^2.11.1",
+    "webpack-bundle-analyzer": "^3.3.2",
     "chalk-log": "1.2.0",
     "chalk": "^2.4.1",
     "dom-stub": "1.0.1",
