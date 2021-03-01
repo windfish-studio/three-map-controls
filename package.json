@@ -17,7 +17,7 @@
     "url": "http://github.com/sikanrong"
   },
   "dependencies": {
-    "three": "^0.113.2"
+    "three": "^0.125.0"
   },
   "devDependencies": {
     "ava": "^2.0.0",
