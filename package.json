@@ -30,7 +30,7 @@
     "chalk-log": "1.2.0",
     "chalk": "^2.4.1",
     "dom-stub": "1.0.1",
-    "gulp-live-server": "0.0.30",
+    "gulp-live-server": "0.0.31",
     "browserify-row-flow": "0.1.0",
     "watchify": "3.7.0",
     "babelify": "7.3.0",
